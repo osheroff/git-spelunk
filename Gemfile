@@ -1,2 +1,4 @@
-source "https://rubygems.org"
-gem "grit"
+source "http://rubygems.org"
+
+gemspec
+

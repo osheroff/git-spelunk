@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
+require 'bundler/setup'
+require 'git_spelunk'
 
-require_relative '../lib/git_spelunk'
-GitSpelunk::UI.new()
-sleep
+file_context = GitSpelunk::FileContext.new(ARGV[0], 1)
+ui = GitSpelunk::UI.new(file_context)
+ui.run

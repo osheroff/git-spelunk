@@ -1,5 +1,11 @@
+PATH
+  remote: .
+  specs:
+    git_spelunk (0.0.1)
+      grit
+
 GEM
-  remote: https://rubygems.org/
+  remote: http://rubygems.org/
   specs:
     diff-lcs (1.2.5)
     grit (2.5.0)
@@ -13,4 +19,4 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  grit
+  git_spelunk!
