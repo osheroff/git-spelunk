@@ -9,30 +9,41 @@ module GitSpelunk
       ensure
         @window.attroff(Curses::A_STANDOUT)
       end
+
+      def line_remainder
+        Curses.cols - @window.curx - 1
+      end
     end
 
     class RepoWindow < Window
       def initialize(height, offset)
         @window = Curses::Window.new(height, Curses.cols, offset, 0)
+        @height = height
+        @content = ""
       end
 
-      def set_content(content)
+      attr_accessor :content
+
+      def draw
         @window.setpos(0,0)
         draw_status_line
-        @window.addstr(content + "\n")
+        @window.addstr(@content + "\n")
+        @window.addstr("\n" * (@height - @content.split("\n").size - 2))
+
         draw_bottom_line
         @window.refresh
       end
 
       def draw_status_line
         with_highlighting do
-          @window.addstr("        \n")
+          @window.addstr("navigation: j k CTRL-D CTRL-U")
+          @window.addstr(" " * line_remainder + "\n")
         end
       end
 
       def draw_bottom_line
         with_highlighting do
-          @window.addstr("        \n")
+          @window.addstr(" " * line_remainder + "\n")
         end
       end
     end
@@ -66,14 +77,12 @@ module GitSpelunk
           end
 
           @window.addstr(" %*s " % [line_number_width, line_number])
-          left = Curses.cols - @window.curx
-          @window.addstr(content[0,left - 1])
+          @window.addstr(content[0,line_remainder])
           @window.addstr("\n")
         end
         @window.refresh
         @window.setpos(0,0)
       end
-
 
       attr_accessor :top
 
@@ -84,15 +93,56 @@ module GitSpelunk
       def cursorup
         return if @cursor == 1
         @cursor -= 1
-        if @top > @cursor
-          @top = @cursor
-        end
+        adjust_top!
       end
 
       def cursordown
         return if @cursor >= data.size
         @cursor += 1
-        if @cursor > bufbottom
+        adjust_top!
+      end
+
+      def pageup
+        previous_offset = @cursor - @top
+        @cursor -= @height / 2
+        if @cursor < 1
+          @cursor = 1
+        end
+
+        @top = @cursor - previous_offset
+        adjust_top!
+      end
+
+      def pagedown
+        previous_offset = @cursor - @top
+        @cursor += @height / 2
+        if @cursor > data.size
+          @cursor = data.size
+        end
+
+        @top = @cursor - previous_offset
+        adjust_top!
+      end
+
+      def go_top
+        @top = @cursor = 1
+      end
+
+      def go_bottom
+        @cursor = data.size
+        @top = data.size - (@height - 1)
+      end
+
+      def adjust_top!
+        if @top < 1
+          @top = 1
+        end
+
+        if @top > @cursor
+          @top = @cursor
+        end
+
+        while @cursor > bufbottom
           @top += 1
         end
       end
@@ -116,21 +166,32 @@ module GitSpelunk
     end
 
     def run
-      @pager.draw
-      while true
-        handle_key(Curses.getch)
+      begin
         @pager.draw
-      end
+        @repo.draw
+        handle_key(Curses.getch)
+      end while true
     end
 
     def handle_key(key)
       case key
-      when Curses::KEY_DOWN, ' ', 'n'
+      when Curses::KEY_DOWN, 'n', 'j'
         @pager.cursordown
-        @repo.set_content({key: "cursordown", top: @pager.top, cursor: @pager.cursor, bufbottom: @pager.bufbottom}.inspect)
-      when Curses::KEY_UP, 'p', '-'
+        @repo.content = {key: "cursordown", top: @pager.top, cursor: @pager.cursor, bufbottom: @pager.bufbottom}.inspect
+      when Curses::KEY_UP, 'p', '-', 'k'
         @pager.cursorup
-        @repo.set_content({key: "cursorup", top: @pager.top, cursor: @pager.cursor, bufbottom: @pager.bufbottom}.inspect)
+        @repo.content = {key: "cursorup", top: @pager.top, cursor: @pager.cursor, bufbottom: @pager.bufbottom}.inspect
+      when Curses::KEY_CTRL_D, ' '
+        @pager.pagedown
+        @repo.content = {key: "pagedown", top: @pager.top, cursor: @pager.cursor, bufbottom: @pager.bufbottom}.inspect
+      when Curses::KEY_CTRL_U
+        @pager.pageup
+        @repo.content = {key: "pageup", top: @pager.top, cursor: @pager.cursor, bufbottom: @pager.bufbottom}.inspect
+      when 'G'
+        @pager.go_bottom
+        @repo.content = {key: "gobottom", top: @pager.top, cursor: @pager.cursor, bufbottom: @pager.bufbottom}.inspect
+      when 'q'
+        exit
       end
     end
   end
