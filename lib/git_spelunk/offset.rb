@@ -53,6 +53,8 @@ module GitSpelunk
       find_parent_line_number(diff_lines(chunk_lines), src_line_number, chunk_starting_line, chunk_total_lines)
     end
 
+    private
+
     def target_chunk(line_number)
       chunks.select {|chunk| hasLine?(lines(chunk), line_number)}[0]
     end
