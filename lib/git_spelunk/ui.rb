@@ -11,6 +11,7 @@ module GitSpelunk
       Curses.start_color
       Curses.raw
       Curses.nonl
+      Curses.curs_set(2)
       screen = Curses.stdscr
       screen.refresh
       screen.keypad(1)
@@ -36,6 +37,7 @@ module GitSpelunk
       begin
         @pager.draw
         @repo.draw
+        @repo.set_cursor
         handle_key(Curses.getch)
       end while true
     end
@@ -72,10 +74,10 @@ module GitSpelunk
     def handle_key(key)
       @heartbeat = Time.now
       case key
-      when Curses::KEY_DOWN, 'n', 'j'
+      when Curses::KEY_DOWN, 'j'
         @pager.cursordown
         after_navigation
-      when Curses::KEY_UP, 'p', '-', 'k'
+      when Curses::KEY_UP, '-', 'k'
         @pager.cursorup
         after_navigation
       when Curses::KEY_CTRL_D, ' '
@@ -107,14 +109,12 @@ module GitSpelunk
 
         @file_context = @file_context.clone_for_parent_sha(@pager.cursor)
         @pager.data = @file_context.get_blame
-        @pager.highlight_sha = false
         @pager.go_to(goto)
       when ']'
         if @history.last
           @file_context = @history.pop
           @pager.data = @file_context.get_blame
           @pager.go_to(@file_context.line_number)
-          @pager.highlight_sha = false
           @pager.draw
         end
       when 's'
@@ -126,6 +126,22 @@ module GitSpelunk
         @pager.draw
         @repo.draw
         @pager.highlight_sha = true
+      when '/'
+        @repo.command_mode = true
+        @repo.command_buffer = '/'
+        @repo.draw
+        @repo.set_cursor
+        begin
+          line = Curses.getstr
+        rescue Interrupt
+          @repo.exit_command_mode!
+        end
+        @search_string = line
+        @pager.search(@search_string, false)
+        @repo.exit_command_mode!
+      when 'n'
+        @pager.search(@search_string, true)
+        after_navigation
       when 'q'
         exit
       end

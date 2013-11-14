@@ -37,7 +37,17 @@ module GitSpelunk
           end
 
           @window.addstr(" %*s " % [line_number_width, line_number])
-          @window.addstr(content[0,line_remainder])
+          if @search_term
+            content.split(/(#{@search_term})/).each do |t|
+              if t == @search_term
+                @window.attron(Curses::A_STANDOUT)
+              end
+              @window.addstr(t[0,line_remainder])
+              @window.attroff(Curses::A_STANDOUT)
+            end
+          else
+            @window.addstr(content[0,line_remainder])
+          end
           @window.addstr("\n")
           @window.attroff(Curses::color_pair(ACTIVE_SHA_COLOR))
         end
@@ -46,6 +56,27 @@ module GitSpelunk
       end
 
       attr_accessor :top
+
+      def search(term, skip_current_line)
+        @search_term = term
+        return unless term
+        save_cursor = @cursor
+        search_data = data.map { |d| d[1] }
+        initial_position = save_cursor - (skip_current_line ? 0 : 1)
+        search_data[initial_position..-1].each_with_index do |d, i|
+          if d =~ /#{term}/
+            go_to(initial_position + i + 1)
+            return
+          end
+        end
+
+        search_data[0..initial_position].each_with_index do |d, i|
+          if d =~ /#{term}/
+            go_to(i + 1)
+            return
+          end
+        end
+      end
 
       def bufbottom
         @top + (@height - 1)

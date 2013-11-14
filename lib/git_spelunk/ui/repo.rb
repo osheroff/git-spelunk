@@ -3,6 +3,7 @@ module GitSpelunk
     class RepoWindow < Window
       def initialize(height, offset)
         @window = Curses::Window.new(height, Curses.cols, offset, 0)
+        @offset = offset
         @height = height
         @command_mode = false
         @command_buffer = ""
@@ -24,11 +25,18 @@ module GitSpelunk
 
         draw_bottom_line
         @window.refresh
+        set_cursor
+      end
+
+      def set_cursor
+        Curses::stdscr.setpos(@offset + @height - 1, command_buffer.size + 1)
       end
 
       def draw_status_line
         with_highlighting do
-          @window.addstr("navigation: j k CTRL-D CTRL-U")
+          @window.addstr("navigation: j k CTRL-D CTRL-U ")
+          @window.addstr("history: [ ] ")
+          @window.addstr("search: / ")
           @window.addstr(" " * line_remainder + "\n")
         end
       end
@@ -36,7 +44,6 @@ module GitSpelunk
       def draw_bottom_line
         if command_mode
           @window.addstr(":" + command_buffer)
-          with_highlighting { @window.addstr(' ') } # cursor emulation.  stupid.
           @window.addstr(" " * line_remainder)
         else
           with_highlighting do
