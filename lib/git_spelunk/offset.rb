@@ -47,7 +47,6 @@ module GitSpelunk
     end
 
     def diff_chunks(diffs)
-      debugger
       # split it into chunks: [["@@ -10,13 +10,18 @@", diffs], ["@@ -20,13 +20,18 @@", diffs, diff]]
       multiple_chunks = diffs[0].diff.split(/(@@.*?@@)/)
       # Discard file name line
@@ -56,8 +55,10 @@ module GitSpelunk
 
     def line_number_to_parent(src_line_number)
       chunk = target_chunk(src_line_number)
-      chunk_starting_line, chunk_total_lines = chunk_start_and_total(chunk)
-      find_parent_line_number(diff_lines(chunk), src_line_number, chunk_starting_line, chunk_total_lines)
+      chunk_starting_line, chunk_total_lines = src_start_and_total(stats_line(chunk))
+      parent_starting_line = parent_start_and_total(stats_line(chunk))[0]
+      parent_line_offset = find_parent_line_number(diff_lines(chunk), src_line_number, chunk_starting_line, chunk_total_lines)
+      parent_starting_line + parent_line_offset
     end
 
     private
@@ -67,18 +68,18 @@ module GitSpelunk
     end
 
     def has_line?(chunk, line_number)
-      starting_line, total_lines = line_start_and_total(chunk[0])
+      starting_line, total_lines = src_start_and_total(stats_line(chunk))
       starting_line + total_lines >= line_number
     end
 
-    def chunk_start_and_total(chunk)
-      line_start_and_total(chunk[0])
-    end
-
-    def line_start_and_total(line)
+    def src_start_and_total(line)
       # Get the offset and line number where lines were added
       # @@ -3,10 +3,17 @@ optionally a line\n   unchnaged_line_1\n-    deleted_line_1\n+    new_line_1"
       line.scan(/\+(.*)@@/)[0][0].split(",").map {|str| str.to_i}
+    end
+
+    def parent_start_and_total(line)
+      line.scan(/\-(.*)\+/)[0][0].split(",").map {|str| str.to_i}
     end
 
     def find_parent_line_number(lines, src_line_number, src_starting_line, src_number_of_lines)
@@ -97,7 +98,8 @@ module GitSpelunk
         end
       end
 
-      src_starting_line + (parent_line_offset - 1)
+      # src_starting_line + (parent_line_offset - 1)
+      parent_line_offset - 1
     end
 
     def src_line?(line)
@@ -110,8 +112,8 @@ module GitSpelunk
       line[0] != '+'
     end
 
-    def stats_line(lines)
-      lines[2]
+    def stats_line(chunk)
+      chunk[0]
     end
 
     def diff_lines(chunk)
