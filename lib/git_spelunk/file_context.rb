@@ -28,7 +28,11 @@ module GitSpelunk
 
     def get_line_for_sha_parent(line_number)
       o = GitSpelunk::Offset.new(@repo, @file, sha_for_line(line_number))
-      o.line_number_to_parent(@new_to_old[line_number])
+      begin
+        o.line_number_to_parent(@new_to_old[line_number])
+      rescue
+        raise @new_to_old[line_number].to_s
+      end
     end
 
     def find_repo_from_file(file)
