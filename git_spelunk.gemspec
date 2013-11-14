@@ -11,6 +11,7 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = ">= 1.3.6"
 
   s.add_runtime_dependency("grit")
+  s.add_runtime_dependency("debugger")
 
   s.files        = Dir.glob("lib/**/*")
   s.require_path = 'lib'

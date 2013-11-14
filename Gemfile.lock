@@ -2,6 +2,7 @@ PATH
   remote: .
   specs:
     git_spelunk (0.0.1)
+      debugger
       grit
 
 GEM
