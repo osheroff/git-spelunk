@@ -1,24 +1,78 @@
+require 'grit'
+require 'fileutils'
+
 module GitSpelunk
   class FileContext
-    def initialize(file, line_number=1)
-      @file = file
-      @line_number = line_number
+    def initialize(file, options = {})
+      @sha = options[:sha] || 'HEAD'
+      @line_number = options[:line_number] || 1
+
+      @repo = options.fetch(:repo) do
+        repo_directory = find_repo_from_file(file)
+        @file = file.sub(%r{^#{repo_directory}/}, '')
+        Grit::Repo.new(repo_directory)
+      end
+
+      @file ||= options.fetch(:file)
+      @commit_cache = {}
     end
 
     attr_accessor :line_number
 
-    def go_to_sha_parent(sha)
-      sha
+    def clone_for_parent_sha(line_number)
+      new_sha = sha_for_line(line_number) + "~1"
+      GitSpelunk::FileContext.new(@file, {:sha => new_sha, :repo => @repo, :file => @file})
     end
 
-    def get_blame
-      lines = File.readlines("/Users/ben/src/zendesk/app/models/ticket.rb")
-      lines.map do |l|
-        ["abcdef", l.chomp]
+    def get_line_for_sha_parent(line_number)
+      @new_to_old[line_number]
+    end
+
+    def find_repo_from_file(file)
+      targets = file.split('/')
+      targets.pop
+      while !File.directory?(targets.join("/") + "/.git")
+        targets.pop
+      end
+
+      if targets.empty?
+        nil
+      else
+        targets.join("/")
       end
     end
 
-    def get_line_commit_info
+    def get_blame
+      @blame_data ||= begin
+        @new_to_old = {}
+        @line_to_sha = {}
+        blame = Grit::Blame.new(@repo, @file, @sha)
+        blame.lines.map do |line|
+          @new_to_old[line.lineno] = line.oldlineno
+          [line.commit.id_abbrev, line.line]
+        end
+      end
+      @blame_data
+    end
+
+    def sha_for_line(line)
+      @blame_data[line - 1][0]
+    end
+
+    def get_line_commit_info(line)
+      get_blame
+      abbrev = sha_for_line(line)
+      commit = (@commit_cache[abbrev] ||= @repo.commit(abbrev))
+      return nil unless commit
+
+      author_info = commit.author_string.split(" ")
+      tz = author_info.pop
+      utc = Time.at(author_info.pop.to_i)
+      [
+        "commit " + commit.id,
+        "Author: " + author_info.join(" "),
+        "Date: " + utc.to_s
+      ].join("\n") + "\n\n" + "     " + commit.short_message
     end
   end
 end

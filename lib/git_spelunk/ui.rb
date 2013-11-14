@@ -27,7 +27,7 @@ module GitSpelunk
       def draw
         @window.setpos(0,0)
         draw_status_line
-        @window.addstr(@content + "\n")
+        @window.addstr(@content + "\n") if content
         @window.addstr("\n" * (@height - @content.split("\n").size - 2))
 
         draw_bottom_line
@@ -49,17 +49,14 @@ module GitSpelunk
     end
 
     class PagerWindow < Window
-      def initialize(height, context)
+      def initialize(height)
         @window = Curses::Window.new(height, Curses.cols, 0, 0)
         @height = height
-        @context = context
-        @cursor = context.line_number
-        @top = context.line_number
+        @cursor = 1
+        @top = 1
       end
 
-      def data
-        @data ||= @context.get_blame
-      end
+      attr_accessor :data
 
       def draw
         @window.clear
@@ -128,6 +125,14 @@ module GitSpelunk
         @top = @cursor = 1
       end
 
+      def go_to(l)
+        previous_offset = @cursor - @top
+        @cursor = l
+        @top = @cursor - previous_offset
+        adjust_top!
+      end
+
+
       def go_bottom
         @cursor = data.size
         @top = data.size - (@height - 1)
@@ -156,7 +161,11 @@ module GitSpelunk
       screen.keypad(1)
 
       calculate_heights!
-      @pager = PagerWindow.new(@pager_height, file_context)
+      @file_context = file_context
+      @history = [file_context]
+      @pager = PagerWindow.new(@pager_height)
+      @pager.data = @file_context.get_blame
+
       @repo = RepoWindow.new(@repo_height, @pager_height)
     end
 
@@ -166,6 +175,8 @@ module GitSpelunk
     end
 
     def run
+      @repo.content = @file_context.get_line_commit_info(@pager.cursor)
+      pause_thread
       begin
         @pager.draw
         @repo.draw
@@ -173,23 +184,59 @@ module GitSpelunk
       end while true
     end
 
+    def pause_thread
+      Thread.abort_on_exception = true
+      Thread.new do
+        while true
+          if heartbeat_expired? && @last_line != @pager.cursor
+            current_line = @pager.cursor
+            content = @file_context.get_line_commit_info(current_line)
+            if heartbeat_expired? && @pager.cursor == current_line
+              @repo.content = content
+              @repo.draw
+              @last_line = current_line
+            else
+              @heartbeat = Time.now
+            end
+          end
+          sleep 0.05
+        end
+      end
+    end
+
+    def heartbeat_expired?
+      @heartbeat && (Time.now - @heartbeat).to_f > 0.30
+    end
+
     def handle_key(key)
+      @heartbeat = Time.now
       case key
       when Curses::KEY_DOWN, 'n', 'j'
         @pager.cursordown
-        @repo.content = {key: "cursordown", top: @pager.top, cursor: @pager.cursor, bufbottom: @pager.bufbottom}.inspect
       when Curses::KEY_UP, 'p', '-', 'k'
         @pager.cursorup
-        @repo.content = {key: "cursorup", top: @pager.top, cursor: @pager.cursor, bufbottom: @pager.bufbottom}.inspect
       when Curses::KEY_CTRL_D, ' '
         @pager.pagedown
-        @repo.content = {key: "pagedown", top: @pager.top, cursor: @pager.cursor, bufbottom: @pager.bufbottom}.inspect
       when Curses::KEY_CTRL_U
         @pager.pageup
-        @repo.content = {key: "pageup", top: @pager.top, cursor: @pager.cursor, bufbottom: @pager.bufbottom}.inspect
       when 'G'
         @pager.go_bottom
-        @repo.content = {key: "gobottom", top: @pager.top, cursor: @pager.cursor, bufbottom: @pager.bufbottom}.inspect
+      when '['
+        goto = @file_context.get_line_for_sha_parent(@pager.cursor)
+
+        @file_context.line_number = @pager.cursor
+        @history.push(@file_context)
+
+        @file_context = @file_context.clone_for_parent_sha(@pager.cursor)
+        @pager.data = @file_context.get_blame
+        @pager.go_to(goto)
+      when ']'
+        if @history.last
+          @file_context = @history.pop
+          @pager.data = @file_context.get_blame
+          @pager.go_to(@file_context.line_number)
+          @pager.draw
+        end
       when 'q'
         exit
       end

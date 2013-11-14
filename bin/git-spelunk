@@ -2,6 +2,6 @@
 require 'bundler/setup'
 require 'git_spelunk'
 
-file_context = GitSpelunk::FileContext.new(ARGV[0], 1)
+file_context = GitSpelunk::FileContext.new(ARGV[0], {:sha => ARGV[1], :line_number => ARGV[2]})
 ui = GitSpelunk::UI.new(file_context)
 ui.run
