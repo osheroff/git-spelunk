@@ -43,7 +43,7 @@ module GitSpelunk
       @file_name = file_name
       @sha = sha
       parent_sha = @repo.commits(@sha)[0].parents[0].id
-      @chunks = @repo.diff(@sha, parent_sha, @file_name)
+      @chunks = @repo.diff(parent_sha, @sha, @file_name)
     end
 
     def line_number_to_parent(src_line_number)
