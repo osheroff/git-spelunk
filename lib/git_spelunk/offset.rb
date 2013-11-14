@@ -56,10 +56,10 @@ module GitSpelunk
     private
 
     def target_chunk(line_number)
-      chunks.select {|chunk| hasLine?(lines(chunk), line_number)}[0]
+      chunks.select {|chunk| has_line?(lines(chunk), line_number)}[0]
     end
 
-    def hasLine?(lines, line_number)
+    def has_line?(lines, line_number)
       starting_line, total_lines = chunk_start_and_total(lines)
       starting_line + total_lines >= line_number
     end
@@ -76,22 +76,22 @@ module GitSpelunk
     end
 
     def find_parent_line_number(lines, src_line_number, src_starting_line, src_number_of_lines)
-      target_line_number = src_line_number - src_starting_line + 1
-      current_line_number = parent_line_number = 1
+      target_line_offset = src_line_number - src_starting_line + 1
+      current_line_offset = parent_line_offset = 1
 
       lines.each do |line|
-        break if current_line_number == target_line_number
+        break if current_line_offset == target_line_offset
 
         if src_line?(line)
-          current_line_number = current_line_number + 1
+          current_line_offset = current_line_offset + 1
         end
 
         if parent_line?(line)
-          parent_line_number = parent_line_number + 1
+          parent_line_offset = parent_line_offset + 1
         end
       end
 
-      src_starting_line + (parent_line_number - 1)
+      src_starting_line + (parent_line_offset - 1)
     end
 
     def src_line?(line)
