@@ -43,30 +43,36 @@ module GitSpelunk
       @file_name = file_name
       @sha = sha
       parent_sha = @repo.commits(@sha)[0].parents[0].id
-      @chunks = @repo.diff(parent_sha, @sha, @file_name)
+      @chunks = diff_chunks(@repo.diff(parent_sha, @sha, @file_name))
+    end
+
+    def diff_chunks(diffs)
+      debugger
+      # split it into chunks: [["@@ -10,13 +10,18 @@", diffs], ["@@ -20,13 +20,18 @@", diffs, diff]]
+      multiple_chunks = diffs[0].diff.split(/(@@.*?@@)/)
+      # Discard file name line
+      multiple_chunks[1..multiple_chunks.length].each_slice(2).to_a
     end
 
     def line_number_to_parent(src_line_number)
       chunk = target_chunk(src_line_number)
-      chunk_lines = lines(chunk)
-      chunk_starting_line, chunk_total_lines = chunk_start_and_total(chunk_lines)
-      find_parent_line_number(diff_lines(chunk_lines), src_line_number, chunk_starting_line, chunk_total_lines)
+      chunk_starting_line, chunk_total_lines = chunk_start_and_total(chunk)
+      find_parent_line_number(diff_lines(chunk), src_line_number, chunk_starting_line, chunk_total_lines)
     end
 
     private
 
     def target_chunk(line_number)
-      chunks.select {|chunk| has_line?(lines(chunk), line_number)}[0]
+      chunks.select {|chunk| has_line?(chunk, line_number)}[0]
     end
 
-    def has_line?(lines, line_number)
-      starting_line, total_lines = chunk_start_and_total(lines)
+    def has_line?(chunk, line_number)
+      starting_line, total_lines = line_start_and_total(chunk[0])
       starting_line + total_lines >= line_number
     end
 
-    def chunk_start_and_total(lines)
-      line = stats_line(lines)
-      line_start_and_total(line)
+    def chunk_start_and_total(chunk)
+      line_start_and_total(chunk[0])
     end
 
     def line_start_and_total(line)
@@ -108,16 +114,8 @@ module GitSpelunk
       lines[2]
     end
 
-    def diff_lines(lines)
-      # TODO: edge case when meta & content are combined e.g.
-      # @@ -18,14 +18,14 @@ var UserAssumeController = Em.Object.extend({
-      # first 3 are meta lines
-      length = lines.length - 3
-      lines[3..length]
-    end
-
-    def lines(chunk)
-      chunk.diff.split("\n")
+    def diff_lines(chunk)
+      chunk[1].split("\n")
     end
   end
 end
