@@ -9,9 +9,10 @@ module GitSpelunk
         @height = height
         @cursor = 1
         @top = 1
+        @highlight_sha = true
       end
 
-      attr_accessor :data
+      attr_accessor :data, :highlight_sha
       attr_reader :cursor, :top
 
       def draw
@@ -25,7 +26,7 @@ module GitSpelunk
           sha, content = *b
           line_number = i + @top
 
-          if sha == active_sha
+          if sha == active_sha && highlight_sha
             @window.attron(Curses::color_pair(ACTIVE_SHA_COLOR))
           end
 

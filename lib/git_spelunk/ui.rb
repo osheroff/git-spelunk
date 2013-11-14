@@ -67,14 +67,19 @@ module GitSpelunk
       case key
       when Curses::KEY_DOWN, 'n', 'j'
         @pager.cursordown
+        @pager.highlight_sha = true
       when Curses::KEY_UP, 'p', '-', 'k'
         @pager.cursorup
+        @pager.highlight_sha = true
       when Curses::KEY_CTRL_D, ' '
         @pager.pagedown
+        @pager.highlight_sha = true
       when Curses::KEY_CTRL_U
         @pager.pageup
+        @pager.highlight_sha = true
       when 'G'
         @pager.go_bottom
+        @pager.highlight_sha = true
       when '['
         goto = @file_context.get_line_for_sha_parent(@pager.cursor)
 
@@ -83,12 +88,14 @@ module GitSpelunk
 
         @file_context = @file_context.clone_for_parent_sha(@pager.cursor)
         @pager.data = @file_context.get_blame
+        @pager.highlight_sha = false
         @pager.go_to(goto)
       when ']'
         if @history.last
           @file_context = @history.pop
           @pager.data = @file_context.get_blame
           @pager.go_to(@file_context.line_number)
+          @pager.highlight_sha = false
           @pager.draw
         end
       when 's'
@@ -99,6 +106,7 @@ module GitSpelunk
         Curses.stdscr.refresh
         @pager.draw
         @repo.draw
+        @pager.highlight_sha = true
       when 'q'
         exit
       end
