@@ -47,7 +47,6 @@ module GitSpelunk
     end
 
     def diff_chunks(diffs)
-      debugger
       # split it into chunks: [["@@ -10,13 +10,18 @@", diffs], ["@@ -20,13 +20,18 @@", diffs, diff]]
       multiple_chunks = diffs[0].diff.split(/(@@.*?@@)/)
       # Discard file name line
