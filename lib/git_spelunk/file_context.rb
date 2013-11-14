@@ -3,6 +3,9 @@ require 'fileutils'
 
 module GitSpelunk
   class FileContext
+    attr_accessor :line_number
+    attr_reader :repo
+
     def initialize(file, options = {})
       @sha = options[:sha] || 'HEAD'
       @line_number = options[:line_number] || 1

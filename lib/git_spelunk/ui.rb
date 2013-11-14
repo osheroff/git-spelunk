@@ -237,6 +237,14 @@ module GitSpelunk
           @pager.go_to(@file_context.line_number)
           @pager.draw
         end
+      when 's'
+        @heartbeat = nil
+        sha = @file_context.sha_for_line(@pager.cursor)
+        Curses.close_screen
+        system("git -p --git-dir='#{@file_context.repo.path}' show #{sha} | less")
+        Curses.stdscr.refresh
+        @pager.draw
+        @repo.draw
       when 'q'
         exit
       end
