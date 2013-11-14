@@ -39,7 +39,7 @@ module GitSpelunk
     attr_reader :repo, :file_name, :sha, :chunks
 
     def initialize(repo, file_name, sha)
-      @repo = Grit::Repo.new(repo)
+      @repo = repo
       @file_name = file_name
       @sha = sha
       parent_sha = @repo.commits(@sha)[0].parents[0].id
@@ -83,11 +83,11 @@ module GitSpelunk
         break if current_line_offset == target_line_offset
 
         if src_line?(line)
-          current_line_offset = current_line_offset + 1
+          current_line_offset += 1
         end
 
         if parent_line?(line)
-          parent_line_offset = parent_line_offset + 1
+          parent_line_offset += 1
         end
       end
 
