@@ -110,12 +110,18 @@ module GitSpelunk
         @file_context = @file_context.clone_for_parent_sha(@pager.cursor)
         @pager.data = @file_context.get_blame
         @pager.go_to(goto)
+
+        # force commit info update
+        @last_line = nil
       when ']'
         if @history.last
           @file_context = @history.pop
           @pager.data = @file_context.get_blame
           @pager.go_to(@file_context.line_number)
           @pager.draw
+
+          # force commit info update
+          @last_line = nil
         end
       when 's'
         @heartbeat = nil
