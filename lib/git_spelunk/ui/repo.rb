@@ -4,10 +4,17 @@ module GitSpelunk
       def initialize(height, offset)
         @window = Curses::Window.new(height, Curses.cols, offset, 0)
         @height = height
+        @command_mode = false
+        @command_buffer = ""
         @content = ""
       end
 
-      attr_accessor :content
+      attr_accessor :content, :command_mode, :command_buffer
+
+      def exit_command_mode!
+        self.command_buffer = ""
+        self.command_mode = false
+      end
 
       def draw
         @window.setpos(0,0)
@@ -27,8 +34,14 @@ module GitSpelunk
       end
 
       def draw_bottom_line
-        with_highlighting do
-          @window.addstr(" " * line_remainder + "\n")
+        if command_mode
+          @window.addstr(":" + command_buffer)
+          with_highlighting { @window.addstr(' ') } # cursor emulation.  stupid.
+          @window.addstr(" " * line_remainder)
+        else
+          with_highlighting do
+            @window.addstr(" " * line_remainder + "\n")
+          end
         end
       end
     end

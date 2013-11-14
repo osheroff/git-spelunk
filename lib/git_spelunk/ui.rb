@@ -62,24 +62,36 @@ module GitSpelunk
       @heartbeat && (Time.now - @heartbeat).to_f > 0.30
     end
 
+    def after_navigation
+      @pager.highlight_sha = true
+      @repo.exit_command_mode!
+    end
+
     def handle_key(key)
       @heartbeat = Time.now
       case key
       when Curses::KEY_DOWN, 'n', 'j'
         @pager.cursordown
-        @pager.highlight_sha = true
+        after_navigation
       when Curses::KEY_UP, 'p', '-', 'k'
         @pager.cursorup
-        @pager.highlight_sha = true
+        after_navigation
       when Curses::KEY_CTRL_D, ' '
         @pager.pagedown
-        @pager.highlight_sha = true
+        after_navigation
       when Curses::KEY_CTRL_U
         @pager.pageup
-        @pager.highlight_sha = true
+        after_navigation
+      when *(0..9).to_a.map(&:to_s)
+        @repo.command_mode = true
+        @repo.command_buffer += key
       when 'G'
-        @pager.go_bottom
-        @pager.highlight_sha = true
+        if @repo.command_buffer != ''
+          @pager.go_to(@repo.command_buffer.to_i)
+        else
+          @pager.go_bottom
+        end
+        after_navigation
       when '['
         goto = @file_context.get_line_for_sha_parent(@pager.cursor)
 
