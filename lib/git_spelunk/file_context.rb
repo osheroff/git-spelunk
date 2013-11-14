@@ -20,7 +20,6 @@ module GitSpelunk
       @commit_cache = {}
     end
 
-    attr_accessor :line_number
 
     def clone_for_parent_sha(line_number)
       new_sha = sha_for_line(line_number) + "~1"

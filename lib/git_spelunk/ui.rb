@@ -1,5 +1,7 @@
 require 'curses'
 
+ACTIVE_SHA_COLOR=1
+
 module GitSpelunk
   class UI
     class Window
@@ -63,9 +65,15 @@ module GitSpelunk
         @window.setpos(0,0)
         line_number_width = (data.size + 1).to_s.size
 
+        active_sha = data[@cursor - 1][0]
+
         data[@top - 1,@height].each_with_index do |b, i|
           sha, content = *b
           line_number = i + @top
+
+          if sha == active_sha
+            @window.attron(Curses::color_pair(ACTIVE_SHA_COLOR))
+          end
 
           if @cursor == line_number
             with_highlighting { @window.addstr(sha) }
@@ -76,6 +84,7 @@ module GitSpelunk
           @window.addstr(" %*s " % [line_number_width, line_number])
           @window.addstr(content[0,line_remainder])
           @window.addstr("\n")
+          @window.attroff(Curses::color_pair(ACTIVE_SHA_COLOR))
         end
         @window.refresh
         @window.setpos(0,0)
@@ -156,9 +165,12 @@ module GitSpelunk
     end
 
     def initialize(file_context)
+      Curses.init_screen
+      Curses.start_color
       screen = Curses.stdscr
       screen.refresh
       screen.keypad(1)
+      Curses.init_pair(ACTIVE_SHA_COLOR, Curses::COLOR_GREEN, Curses::COLOR_BLACK)
 
       calculate_heights!
       @file_context = file_context
