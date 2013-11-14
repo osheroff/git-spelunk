@@ -36,6 +36,7 @@ module GitSpelunk
     end
 
     def find_repo_from_file(file)
+      file = './' + file unless file.start_with?('/')
       targets = file.split('/')
       targets.pop
       while !File.directory?(targets.join("/") + "/.git")
