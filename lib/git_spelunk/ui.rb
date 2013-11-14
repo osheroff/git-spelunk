@@ -9,6 +9,8 @@ module GitSpelunk
     def initialize(file_context)
       Curses.init_screen
       Curses.start_color
+      Curses.raw
+      Curses.nonl
       screen = Curses.stdscr
       screen.refresh
       screen.keypad(1)
@@ -85,6 +87,11 @@ module GitSpelunk
       when *(0..9).to_a.map(&:to_s)
         @repo.command_mode = true
         @repo.command_buffer += key
+      when Curses::KEY_CTRL_M
+        if @repo.command_buffer != ''
+          @pager.go_to(@repo.command_buffer.to_i)
+        end
+        after_navigation
       when 'G'
         if @repo.command_buffer != ''
           @pager.go_to(@repo.command_buffer.to_i)
