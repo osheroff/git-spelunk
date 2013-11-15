@@ -13,5 +13,6 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency("grit")
 
   s.files        = Dir.glob("lib/**/*")
+  s.executables  << "git-spelunk"
   s.require_path = 'lib'
 end
