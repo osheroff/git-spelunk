@@ -1,43 +1,50 @@
 require 'git_spelunk/ui/window'
 require 'git_spelunk/ui/pager'
 require 'git_spelunk/ui/repo'
+require 'git_spelunk/ui/status'
 require 'curses'
 
 module GitSpelunk
   class UI
-
     def initialize(file_context)
-      Curses.init_screen
-      Curses.start_color
-      Curses.raw
-      Curses.nonl
-      Curses.curs_set(2)
-      screen = Curses.stdscr
-      screen.refresh
-      screen.keypad(1)
-      Curses.init_pair(ACTIVE_SHA_COLOR, Curses::COLOR_GREEN, Curses::COLOR_BLACK)
+      init_curses
 
       calculate_heights!
       @file_context = file_context
       @history = [file_context]
+
       @pager = PagerWindow.new(@pager_height)
       @pager.data = @file_context.get_blame
 
       @repo = RepoWindow.new(@repo_height, @pager_height)
+
+      @status = StatusWindow.new(1, Curses.lines - 1)
+    end
+
+    def init_curses
+      Curses.init_screen
+      Curses.start_color
+      Curses.raw
+      Curses.nonl
+      Curses.noecho
+      Curses.curs_set(0)
+      screen = Curses.stdscr
+      screen.refresh
+      screen.keypad(1)
+      Curses.init_pair(ACTIVE_SHA_COLOR, Curses::COLOR_GREEN, Curses::COLOR_BLACK)
     end
 
     def calculate_heights!
       @repo_height = (Curses.lines.to_f * 0.20).to_i
-      @pager_height = Curses.lines  - @repo_height
+      @pager_height = Curses.lines  - @repo_height - 1
+      @status_height = 1
     end
 
     def run
       @repo.content = @file_context.get_line_commit_info(@pager.cursor)
       pause_thread
       begin
-        @pager.draw
-        @repo.draw
-        @repo.set_cursor
+        [@pager, @repo, @status].each(&:draw)
         handle_key(Curses.getch)
       end while true
     end
@@ -52,6 +59,7 @@ module GitSpelunk
             if heartbeat_expired? && @pager.cursor == current_line
               @repo.content = content
               @repo.draw
+              @status.draw
               @last_line = current_line
             else
               @heartbeat = Time.now
@@ -68,7 +76,7 @@ module GitSpelunk
 
     def after_navigation
       @pager.highlight_sha = true
-      @repo.exit_command_mode!
+      @status.exit_command_mode!
     end
 
     def handle_key(key)
@@ -87,16 +95,15 @@ module GitSpelunk
         @pager.pageup
         after_navigation
       when *(0..9).to_a.map(&:to_s)
-        @repo.command_mode = true
-        @repo.command_buffer += key
+        @status.command_buffer += key
       when Curses::KEY_CTRL_M
-        if @repo.command_buffer != ''
-          @pager.go_to(@repo.command_buffer.to_i)
+        if @status.command_buffer != ''
+          @pager.go_to(@status.command_buffer.to_i)
         end
         after_navigation
       when 'G'
-        if @repo.command_buffer != ''
-          @pager.go_to(@repo.command_buffer.to_i)
+        if @status.command_buffer != ''
+          @pager.go_to(@status.command_buffer.to_i)
         else
           @pager.go_bottom
         end
@@ -120,6 +127,7 @@ module GitSpelunk
           @pager.data = @file_context.get_blame
           @pager.go_to(@file_context.line_number)
           @pager.draw
+          @status.draw
 
           # force commit info update
           @last_line = nil
@@ -130,27 +138,46 @@ module GitSpelunk
         Curses.close_screen
         system("git -p --git-dir='#{@file_context.repo.path}' show #{sha} | less")
         Curses.stdscr.refresh
-        @pager.draw
-        @repo.draw
-        @pager.highlight_sha = true
+        [@pager, @repo, @status].each(&:draw)
       when '/'
-        @repo.command_mode = true
-        @repo.command_buffer = '/'
-        @repo.draw
-        @repo.set_cursor
-        begin
-          line = Curses.getstr
-        rescue Interrupt
-          @repo.exit_command_mode!
+        @heartbeat = nil
+        @status.command_buffer = '/'
+        @status.draw
+
+        line = getline
+        if line
+          @search_string = line
+          @pager.search(@search_string, false)
         end
-        @search_string = line
-        @pager.search(@search_string, false)
-        @repo.exit_command_mode!
+        @status.exit_command_mode!
       when 'n'
         @pager.search(@search_string, true)
         after_navigation
       when 'q'
         exit
+      end
+    end
+
+    # you'd really think there was a better way
+    def getline
+      while ch = Curses.getch
+        case ch
+        when Curses::KEY_CTRL_C
+          @status.command_buffer = ''
+          return
+        when Curses::KEY_CTRL_M
+          return @status.command_buffer[1..-1]
+        when Curses::KEY_BACKSPACE, Curses::KEY_CTRL_H, 127
+          if @status.command_buffer == "/"
+            return
+          end
+          @status.command_buffer.chop!
+        else
+          if ch.is_a?(String)
+            @status.command_buffer += ch
+          end
+        end
+        @status.draw
       end
     end
   end
