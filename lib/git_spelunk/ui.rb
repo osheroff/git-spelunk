@@ -103,16 +103,17 @@ module GitSpelunk
         after_navigation
       when '['
         goto = @file_context.get_line_for_sha_parent(@pager.cursor)
+        if goto
+          @file_context.line_number = @pager.cursor
+          @history.push(@file_context)
 
-        @file_context.line_number = @pager.cursor
-        @history.push(@file_context)
+          @file_context = @file_context.clone_for_parent_sha(@pager.cursor)
+          @pager.data = @file_context.get_blame
+          @pager.go_to(goto)
 
-        @file_context = @file_context.clone_for_parent_sha(@pager.cursor)
-        @pager.data = @file_context.get_blame
-        @pager.go_to(goto)
-
-        # force commit info update
-        @last_line = nil
+          # force commit info update
+          @last_line = nil
+        end
       when ']'
         if @history.last
           @file_context = @history.pop

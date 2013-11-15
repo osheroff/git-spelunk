@@ -47,13 +47,15 @@ module GitSpelunk
     end
 
     def diff_chunks(diffs)
+      return nil if diffs.empty?
       # split it into chunks: [["@@ -10,13 +10,18 @@", diffs], ["@@ -20,13 +20,18 @@", diffs, diff]]
-      multiple_chunks = diffs[0].diff.split(/(@@.*?@@)/)
+      multiple_chunks = diffs[0].diff.split(/(@@.*?@@.*?\n)/)
       # Discard file name line
       multiple_chunks[1..multiple_chunks.length].each_slice(2).to_a
     end
 
     def line_number_to_parent(src_line_number)
+      return nil unless @chunks
       chunk = target_chunk(src_line_number)
       chunk_starting_line, chunk_total_lines = src_start_and_total(stats_line(chunk))
       parent_starting_line = parent_start_and_total(stats_line(chunk))[0]
@@ -83,8 +85,8 @@ module GitSpelunk
     end
 
     def find_parent_line_number(lines, src_line_number, src_starting_line, src_number_of_lines)
-      target_line_offset = src_line_number - src_starting_line + 1
-      current_line_offset = parent_line_offset = 1
+      target_line_offset = src_line_number - src_starting_line
+      current_line_offset = parent_line_offset = diff_index = 0
 
       lines.each do |line|
         break if current_line_offset == target_line_offset
@@ -96,10 +98,27 @@ module GitSpelunk
         if parent_line?(line)
           parent_line_offset += 1
         end
+
+        diff_index += 1
+      end
+      # find last contiguous bit of diff
+      line = lines[diff_index]
+      removals = additions = 0
+
+      while ["-", "+"].include?(line[0])
+        if parent_line?(line)
+          removals += 1
+        else
+          additions += 1
+        end
+
+        diff_index -= 1
+        line = lines[diff_index]
       end
 
-      # src_starting_line + (parent_line_offset - 1)
-      parent_line_offset - 1
+      forward_push = current_line_offset - additions
+      forward_push = removals if forward_push > removals # clamp line matching
+      parent_line_offset - removals + forward_push
     end
 
     def src_line?(line)
