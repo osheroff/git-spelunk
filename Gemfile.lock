@@ -1,13 +1,13 @@
 PATH
   remote: .
   specs:
-    git_spelunk (0.0.1)
-      debugger
+    git_spelunk (0.1.1)
       grit
 
 GEM
   remote: http://rubygems.org/
   specs:
+    bump (0.4.2)
     columnize (0.3.6)
     debugger (1.6.2)
       columnize (>= 0.3.1)
@@ -22,10 +22,13 @@ GEM
       posix-spawn (~> 0.3.6)
     mime-types (1.25)
     posix-spawn (0.3.6)
+    rake (10.1.0)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
+  bump
   debugger
   git_spelunk!
+  rake
