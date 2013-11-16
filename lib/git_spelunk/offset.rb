@@ -49,7 +49,7 @@ module GitSpelunk
     def diff_chunks(diffs)
       return nil if diffs.empty?
       # split it into chunks: [["@@ -10,13 +10,18 @@", diffs], ["@@ -20,13 +20,18 @@", diffs, diff]]
-      multiple_chunks = diffs[0].diff.split(/(@@.*?@@.*?\n)/)
+      multiple_chunks = diffs[0].diff.split(/(@@ \-\d+,\d+ \+\d+,\d+ @@.*?\n)/)
       # Discard file name line
       multiple_chunks[1..multiple_chunks.length].each_slice(2).to_a
     end
