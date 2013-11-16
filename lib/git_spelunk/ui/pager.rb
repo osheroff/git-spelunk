@@ -121,6 +121,12 @@ module GitSpelunk
       end
 
       def go_to(l)
+        if l > @data.size
+          l = @data.size
+        elsif l < 1
+          l = 1
+        end
+
         previous_offset = @cursor - @top
         @cursor = l
         @top = @cursor - previous_offset
