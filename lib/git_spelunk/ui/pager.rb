@@ -57,25 +57,22 @@ module GitSpelunk
 
       attr_accessor :top
 
+      #returns position in data set, not cursor position
+      def find_next_index(term, start, reverse)
+        pos = data[start..-1].find_index { |d| d[1] =~ /#{term}/ }
+        pos ? pos + start : nil
+      end
+
       def search(term, skip_current_line)
         @search_term = term
         return unless term
         save_cursor = @cursor
-        search_data = data.map { |d| d[1] }
         initial_position = save_cursor - (skip_current_line ? 0 : 1)
-        search_data[initial_position..-1].each_with_index do |d, i|
-          if d =~ /#{term}/
-            go_to(initial_position + i + 1)
-            return
-          end
-        end
 
-        search_data[0..initial_position].each_with_index do |d, i|
-          if d =~ /#{term}/
-            go_to(i + 1)
-            return
-          end
-        end
+        p = find_next_index(term, initial_position, false) ||
+              find_next_index(term, 0, false)
+
+        go_to(p + 1) if p
       end
 
       def bufbottom
