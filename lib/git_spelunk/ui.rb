@@ -139,19 +139,21 @@ module GitSpelunk
         system("git -p --git-dir='#{@file_context.repo.path}' show #{sha} | less")
         Curses.stdscr.refresh
         [@pager, @repo, @status].each(&:draw)
-      when '/'
+      when '/', '?'
         @heartbeat = nil
-        @status.command_buffer = '/'
+        @status.command_buffer = key
         @status.draw
 
         line = getline
         if line
-          @search_string = line
-          @pager.search(@search_string, false)
+          @pager.search(line, false, key == '?')
         end
         @status.exit_command_mode!
       when 'n'
-        @pager.search(@search_string, true)
+        @pager.search(nil, true, false)
+        after_navigation
+      when 'N'
+        @pager.search(nil, true, true)
         after_navigation
       when 'q'
         exit

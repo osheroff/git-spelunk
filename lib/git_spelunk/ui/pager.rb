@@ -59,18 +59,30 @@ module GitSpelunk
 
       #returns position in data set, not cursor position
       def find_next_index(term, start, reverse)
-        pos = data[start..-1].find_index { |d| d[1] =~ /#{term}/ }
-        pos ? pos + start : nil
+        i = start
+        while i < data.size && i >= 0
+          if data[i][1] =~ /#{term}/
+            return i
+          end
+          i += reverse ? -1 : 1
+        end
+        nil
       end
 
-      def search(term, skip_current_line)
-        @search_term = term
-        return unless term
-        save_cursor = @cursor
-        initial_position = save_cursor - (skip_current_line ? 0 : 1)
+      def search(term, skip_current_line, reverse)
+        if term
+          @search_term = term
+        else
+          term = @search_term # nil indicates 'use-last-term'
+        end
 
-        p = find_next_index(term, initial_position, false) ||
-              find_next_index(term, 0, false)
+        search_from = @cursor - 1
+        if skip_current_line
+          search_from += reverse ? -1 : 1
+        end
+
+        p = find_next_index(term, search_from, reverse) ||
+              find_next_index(term, reverse ? data.size - 1 : 0, reverse)
 
         go_to(p + 1) if p
       end
