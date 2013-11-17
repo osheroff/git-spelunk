@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    git_spelunk (0.1.3)
+    git_spelunk (0.2.0)
       grit
 
 GEM
