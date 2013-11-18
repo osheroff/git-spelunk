@@ -20,9 +20,10 @@ module GitSpelunk
 
       def draw_status_line
         with_highlighting do
-          @window.addstr("navigation: j k CTRL-D CTRL-U ")
-          @window.addstr("history: [ ] ")
-          @window.addstr("search: / ")
+          @window.addstr("navigation: j k CTRL-D CTRL-U   ")
+          @window.addstr("history: [ ]   ")
+          @window.addstr("search: / ? n N   ")
+          @window.addstr("git-show: s   ")
           @window.addstr(" " * line_remainder + "\n")
         end
       end
