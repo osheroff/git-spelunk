@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = "git_spelunk"
-  s.version     = "0.2.0"
+  s.version     = "0.2.1"
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Ben Osheroff", "Saroj Yadav"]
   s.email       = ["ben@zendesk.com", "saroj@zendesk.com"]
