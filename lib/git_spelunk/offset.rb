@@ -89,7 +89,7 @@ module GitSpelunk
       current_line_offset = parent_line_offset = diff_index = 0
 
       lines.each do |line|
-        break if current_line_offset == target_line_offset
+        break if current_line_offset == target_line_offset && src_line?(line)
 
         if src_line?(line)
           current_line_offset += 1
@@ -101,11 +101,15 @@ module GitSpelunk
 
         diff_index += 1
       end
-      # find last contiguous bit of diff
-      line = lines[diff_index]
-      removals = additions = 0
 
-      while ["-", "+"].include?(line[0])
+      # find last contiguous bit of diff, and try to offset into that.
+      removals = additions = 0
+      diff_index -= 1
+
+      while true
+        line = lines[diff_index]
+        break unless ["-", "+"].include?(line[0])
+
         if parent_line?(line)
           removals += 1
         else
@@ -113,12 +117,10 @@ module GitSpelunk
         end
 
         diff_index -= 1
-        line = lines[diff_index]
       end
 
-      forward_push = current_line_offset - additions
-      forward_push = removals if forward_push > removals # clamp line matching
-      parent_line_offset - removals + forward_push
+      forward_push = [additions, removals - 1].min
+      (parent_line_offset - removals) + forward_push
     end
 
     def src_line?(line)
