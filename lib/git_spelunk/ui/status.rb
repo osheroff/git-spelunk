@@ -5,9 +5,20 @@ module GitSpelunk
         @window = Curses::Window.new(height, Curses.cols, offset, 0)
         @offset = offset
         @command_buffer = ""
+        @status_message = ""
+        @onetime_message = nil
       end
 
-      attr_accessor :command_buffer
+      attr_accessor :command_buffer, :status_message
+
+      def clear_onetime_message!
+        @onetime_message = nil
+      end
+
+      def set_onetime_message(message)
+        @onetime_message = message
+        draw
+      end
 
       def exit_command_mode!
         self.command_buffer = ""
@@ -26,6 +37,7 @@ module GitSpelunk
         else
           Curses.curs_set(0)
           with_highlighting do
+            @window.addstr(@onetime_message || @status_message)
             @window.addstr(" " * line_remainder + "\n")
           end
         end

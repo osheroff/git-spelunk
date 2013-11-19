@@ -4,7 +4,7 @@ require 'fileutils'
 module GitSpelunk
   class FileContext
     attr_accessor :line_number
-    attr_reader :repo
+    attr_reader :repo, :sha, :file
 
     def initialize(file, options = {})
       @sha = options[:sha] || 'HEAD'
@@ -27,8 +27,17 @@ module GitSpelunk
     end
 
     def get_line_for_sha_parent(line_number)
-      o = GitSpelunk::Offset.new(@repo, @file, sha_for_line(line_number))
-      o.line_number_to_parent(@new_to_old[line_number])
+      o = GitSpelunk::Offset.new(@repo, @file, sha_for_line(line_number), @new_to_old[line_number])
+      line = o.line_number_to_parent
+      if line
+        line
+      else
+        if o.at_beginning_of_time?
+          :at_beginning_of_time
+        elsif o.unable_to_trace_lineage?
+          :unable_to_trace
+        end
+      end
     end
 
     def find_repo_from_file(file)

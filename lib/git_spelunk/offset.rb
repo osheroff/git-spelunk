@@ -38,13 +38,39 @@ module GitSpelunk
   class Offset
     attr_reader :repo, :file_name, :sha, :chunks
 
-    def initialize(repo, file_name, sha)
+    def initialize(repo, file_name, sha, line_number)
       @repo = repo
       @file_name = file_name
       @sha = sha
-      parent_sha = @repo.commits(@sha)[0].parents[0].id
-      @chunks = diff_chunks(@repo.diff(parent_sha, @sha, @file_name))
+      @line_number = line_number
+      @parent = @repo.commits(@sha)[0].parents[0]
+      true
     end
+
+    def chunks
+      @chunks ||= diff_chunks(@repo.diff(@parent.id, @sha, @file_name))
+    end
+
+    def at_beginning_of_time?
+      @parent.nil?
+    end
+
+    def unable_to_trace_lineage?
+      @parent && (@chunks.nil? || target_chunk.nil?)
+    end
+
+    def line_number_to_parent
+      return nil unless @parent && chunks
+      chunk = target_chunk(@line_number)
+      return nil unless chunk
+
+      chunk_starting_line, chunk_total_lines = src_start_and_total(stats_line(chunk))
+      parent_starting_line = parent_start_and_total(stats_line(chunk))[0]
+      parent_line_offset = find_parent_line_number(diff_lines(chunk), @line_number, chunk_starting_line, chunk_total_lines)
+      parent_starting_line + parent_line_offset
+    end
+
+    private
 
     def diff_chunks(diffs)
       return nil if diffs.empty?
@@ -54,16 +80,6 @@ module GitSpelunk
       multiple_chunks[1..multiple_chunks.length].each_slice(2).to_a
     end
 
-    def line_number_to_parent(src_line_number)
-      return nil unless @chunks
-      chunk = target_chunk(src_line_number)
-      chunk_starting_line, chunk_total_lines = src_start_and_total(stats_line(chunk))
-      parent_starting_line = parent_start_and_total(stats_line(chunk))[0]
-      parent_line_offset = find_parent_line_number(diff_lines(chunk), src_line_number, chunk_starting_line, chunk_total_lines)
-      parent_starting_line + parent_line_offset
-    end
-
-    private
 
     def target_chunk(line_number)
       chunks.select {|chunk| has_line?(chunk, line_number)}[0]

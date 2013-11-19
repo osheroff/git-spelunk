@@ -19,6 +19,7 @@ module GitSpelunk
       @repo = RepoWindow.new(@repo_height, @pager_height)
 
       @status = StatusWindow.new(1, Curses.lines - 1)
+      set_status_message
     end
 
     def init_curses
@@ -49,6 +50,10 @@ module GitSpelunk
       end while true
     end
 
+    def set_status_message
+      @status.status_message = "#{@file_context.file} @ #{@file_context.sha}"
+    end
+
     def pause_thread
       Thread.abort_on_exception = true
       Thread.new do
@@ -59,7 +64,6 @@ module GitSpelunk
             if heartbeat_expired? && @pager.cursor == current_line
               @repo.content = content
               @repo.draw
-              @status.draw
               @last_line = current_line
             else
               @heartbeat = Time.now
@@ -77,6 +81,7 @@ module GitSpelunk
     def after_navigation
       @pager.highlight_sha = true
       @status.exit_command_mode!
+      @status.clear_onetime_message!
     end
 
     def handle_key(key)
@@ -109,8 +114,9 @@ module GitSpelunk
         end
         after_navigation
       when '['
+        @status.set_onetime_message("Rewinding...")
         goto = @file_context.get_line_for_sha_parent(@pager.cursor)
-        if goto
+        if goto.is_a?(Fixnum)
           @file_context.line_number = @pager.cursor
           @history.push(@file_context)
 
@@ -119,15 +125,22 @@ module GitSpelunk
           @pager.go_to(goto)
 
           # force commit info update
+          @status.clear_onetime_message!
+          set_status_message
           @last_line = nil
+        elsif goto == :at_beginning_of_time
+          @status.set_onetime_message("At beginning of repository history!")
+        elsif goto == :unable_to_trace
+          @status.set_onetime_message("Unable to trace lineage of file line")
         end
       when ']'
         if @history.last
           @file_context = @history.pop
           @pager.data = @file_context.get_blame
           @pager.go_to(@file_context.line_number)
-          @pager.draw
-          @status.draw
+
+          @status.clear_onetime_message!
+          set_status_message
 
           # force commit info update
           @last_line = nil
@@ -138,7 +151,6 @@ module GitSpelunk
         Curses.close_screen
         system("git -p --git-dir='#{@file_context.repo.path}' show #{sha} | less")
         Curses.stdscr.refresh
-        [@pager, @repo, @status].each(&:draw)
       when '/', '?'
         @heartbeat = nil
         @status.command_buffer = key
