@@ -84,6 +84,44 @@ module GitSpelunk
       @status.clear_onetime_message!
     end
 
+    def history_back
+      @status.set_onetime_message("Rewinding...")
+      goto = @file_context.get_line_for_sha_parent(@pager.cursor)
+      if goto.is_a?(Fixnum)
+        @file_context.line_number = @pager.cursor
+        @history.push(@file_context)
+
+        @file_context = @file_context.clone_for_parent_sha(@pager.cursor)
+        @pager.data = @file_context.get_blame
+        @pager.go_to(goto)
+
+        # force commit info update
+        @status.clear_onetime_message!
+        set_status_message
+        @last_line = nil
+      elsif goto == :at_beginning_of_time
+        @status.set_onetime_message("At beginning of repository history!")
+      elsif goto == :unable_to_trace
+        @status.set_onetime_message("Unable to trace lineage of file line")
+      elsif goto == :first_commit_for_file
+        @status.set_onetime_message("At first appearance of file")
+      end
+    end
+
+    def history_forward
+      if @history.last
+        @file_context = @history.pop
+        @pager.data = @file_context.get_blame
+        @pager.go_to(@file_context.line_number)
+
+        @status.clear_onetime_message!
+        set_status_message
+
+        # force commit info update
+        @last_line = nil
+      end
+    end
+
     def handle_key(key)
       @heartbeat = Time.now
       case key
@@ -114,37 +152,9 @@ module GitSpelunk
         end
         after_navigation
       when '['
-        @status.set_onetime_message("Rewinding...")
-        goto = @file_context.get_line_for_sha_parent(@pager.cursor)
-        if goto.is_a?(Fixnum)
-          @file_context.line_number = @pager.cursor
-          @history.push(@file_context)
-
-          @file_context = @file_context.clone_for_parent_sha(@pager.cursor)
-          @pager.data = @file_context.get_blame
-          @pager.go_to(goto)
-
-          # force commit info update
-          @status.clear_onetime_message!
-          set_status_message
-          @last_line = nil
-        elsif goto == :at_beginning_of_time
-          @status.set_onetime_message("At beginning of repository history!")
-        elsif goto == :unable_to_trace
-          @status.set_onetime_message("Unable to trace lineage of file line")
-        end
+        history_back
       when ']'
-        if @history.last
-          @file_context = @history.pop
-          @pager.data = @file_context.get_blame
-          @pager.go_to(@file_context.line_number)
-
-          @status.clear_onetime_message!
-          set_status_message
-
-          # force commit info update
-          @last_line = nil
-        end
+        history_forward
       when 's'
         @heartbeat = nil
         sha = @file_context.sha_for_line(@pager.cursor)

@@ -59,13 +59,19 @@ module GitSpelunk
       @parent && (@chunks.nil? || target_chunk.nil?)
     end
 
+    def first_commit_for_file?
+
+    end
+
     def line_number_to_parent
-      return nil unless @parent && chunks
+      return :at_beginning_of_time unless @parent && chunks
       chunk = target_chunk(@line_number)
-      return nil unless chunk
+      return :unable_to_trace unless chunk
+
+      parent_starting_line, parent_total_lines = parent_start_and_total(stats_line(chunk))
+      return :first_commit_for_file if parent_starting_line == 0 && parent_total_lines == 0
 
       chunk_starting_line, chunk_total_lines = src_start_and_total(stats_line(chunk))
-      parent_starting_line = parent_start_and_total(stats_line(chunk))[0]
       parent_line_offset = find_parent_line_number(diff_lines(chunk), @line_number, chunk_starting_line, chunk_total_lines)
       parent_starting_line + parent_line_offset
     end
@@ -93,11 +99,11 @@ module GitSpelunk
     def src_start_and_total(line)
       # Get the offset and line number where lines were added
       # @@ -3,10 +3,17 @@ optionally a line\n   unchnaged_line_1\n-    deleted_line_1\n+    new_line_1"
-      line.scan(/\+(.*)@@/)[0][0].split(",").map {|str| str.to_i}
+      line.scan(/\+(\d+),(\d+)/).first.map { |str| str.to_i }
     end
 
     def parent_start_and_total(line)
-      line.scan(/\-(.*)\+/)[0][0].split(",").map {|str| str.to_i}
+      line.scan(/\-(\d+),(\d+)/).first.map { |str| str.to_i }
     end
 
     def find_parent_line_number(lines, src_line_number, src_starting_line, src_number_of_lines)
@@ -122,8 +128,9 @@ module GitSpelunk
       removals = additions = 0
       diff_index -= 1
 
-      while true
+      while diff_index > 0
         line = lines[diff_index]
+
         break unless ["-", "+"].include?(line[0])
 
         if parent_line?(line)
