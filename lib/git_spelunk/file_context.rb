@@ -12,7 +12,7 @@ module GitSpelunk
 
       @repo = options.fetch(:repo) do
         repo_directory = find_repo_from_file(file)
-        @file = file.sub(%r{^#{repo_directory}/}, '')
+        @file = File.expand_path(file).sub(%r{^#{repo_directory}/}, '')
         Grit::Repo.new(repo_directory)
       end
 
@@ -33,7 +33,7 @@ module GitSpelunk
 
     def find_repo_from_file(file)
       file = './' + file unless file.start_with?('/')
-      targets = file.split('/')
+      targets = File.expand_path(file).split('/')
       targets.pop
       while !File.directory?(targets.join("/") + "/.git")
         targets.pop
