@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    git_spelunk (0.2.0)
+    git_spelunk (0.2.2)
       grit
 
 GEM
@@ -24,7 +24,7 @@ GEM
     minitest (5.1.0)
     minitest-rg (5.0.0)
       minitest (~> 5.0)
-    posix-spawn (0.3.6)
+    posix-spawn (0.3.8)
     rake (10.1.0)
 
 PLATFORMS
