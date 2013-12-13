@@ -24,6 +24,7 @@ module GitSpelunk
           @window.addstr("history: [ ]   ")
           @window.addstr("search: / ? n N   ")
           @window.addstr("git-show: s   ")
+          @window.addstr("quit: q   ")
           @window.addstr(" " * line_remainder + "\n")
         end
       end
