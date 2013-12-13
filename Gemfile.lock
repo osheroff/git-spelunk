@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    git_spelunk (0.2.2)
+    git_spelunk (0.2.0)
       grit
 
 GEM
@@ -20,7 +20,10 @@ GEM
       diff-lcs (~> 1.1)
       mime-types (~> 1.15)
       posix-spawn (~> 0.3.6)
-    mime-types (1.25)
+    mime-types (1.25.1)
+    minitest (5.1.0)
+    minitest-rg (5.0.0)
+      minitest (~> 5.0)
     posix-spawn (0.3.6)
     rake (10.1.0)
 
@@ -31,4 +34,6 @@ DEPENDENCIES
   bump
   debugger
   git_spelunk!
+  minitest
+  minitest-rg
   rake

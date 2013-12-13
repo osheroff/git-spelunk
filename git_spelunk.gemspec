@@ -1,4 +1,10 @@
-Gem::Specification.new "git_spelunk", "0.2.2" do |s|
+$LOAD_PATH.unshift File.expand_path("../lib", __FILE__)
+require "git_spelunk/version"
+
+Gem::Specification.new do |s|
+  s.name        = "git_spelunk"
+  s.version     = GitSpelunk::VERSION
+  s.platform    = Gem::Platform::RUBY
   s.authors     = ["Ben Osheroff", "Saroj Yadav"]
   s.email       = ["ben@zendesk.com", "saroj@zendesk.com"]
   s.homepage    = "https://github.com/osheroff/git-spelunk"
