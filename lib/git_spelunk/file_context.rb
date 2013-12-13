@@ -1,5 +1,6 @@
 require 'grit'
 require 'fileutils'
+require 'git_spelunk/blame'
 
 module GitSpelunk
   class FileContext
@@ -50,17 +51,17 @@ module GitSpelunk
       @blame_data ||= begin
         @new_to_old = {}
         @line_to_sha = {}
-        blame = Grit::Blame.new(@repo, @file, @sha)
-        blame.lines.map do |line|
-          @new_to_old[line.lineno] = line.oldlineno
-          [line.commit.id_abbrev, line.line]
+        blame = GitSpelunk::Blame.new(@repo, @file, @sha)
+        blame.lines.each do |line|
+          @new_to_old[line.line_number] = line.old_line_number
         end
+        blame.lines
       end
       @blame_data
     end
 
     def sha_for_line(line)
-      @blame_data[line - 1][0]
+      @blame_data[line - 1].sha
     end
 
     def get_line_commit_info(line)
