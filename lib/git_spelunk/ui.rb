@@ -177,7 +177,7 @@ module GitSpelunk
       when 'N'
         @pager.search(nil, true, true)
         after_navigation
-      when 'q'
+      when 'q', Curses::KEY_CTRL_C
         exit
       end
     end
