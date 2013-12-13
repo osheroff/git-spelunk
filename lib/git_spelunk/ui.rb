@@ -1,4 +1,5 @@
 require 'git_spelunk/ui/window'
+require 'git_spelunk/ui/string_window'
 require 'git_spelunk/ui/pager'
 require 'git_spelunk/ui/repo'
 require 'git_spelunk/ui/status'

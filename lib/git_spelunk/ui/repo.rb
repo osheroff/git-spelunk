@@ -1,32 +1,28 @@
 module GitSpelunk
   class UI
-    class RepoWindow < Window
-      def initialize(height, offset)
-        @window = Curses::Window.new(height, Curses.cols, offset, 0)
-        @offset = offset
-        @height = height
-        @content = ""
-      end
-
+    class RepoWindow < StringWindow
       attr_accessor :content, :command_mode, :command_buffer
 
-      def draw
-        @window.setpos(0,0)
-        draw_status_line
-        @window.addstr(@content + "\n") if content
-        @window.addstr("\n" * (@height - @content.split("\n").size - 1))
-        @window.refresh
+      def initialize(height, offset)
+        super
+        self.content = ""
       end
 
-      def draw_status_line
-        with_highlighting do
-          @window.addstr("navigation: j k CTRL-D CTRL-U   ")
-          @window.addstr("history: [ ]   ")
-          @window.addstr("search: / ? n N   ")
-          @window.addstr("git-show: s   ")
-          @window.addstr("quit: q   ")
-          @window.addstr(" " * line_remainder + "\n")
-        end
+      def string
+        status_line + "\n" + content
+      end
+
+      private
+
+      #with_highlighting do
+      def status_line
+        [
+          "navigation: j k CTRL-D CTRL-U",
+          "history: [ ]",
+          "search: / ? n N",
+          "git-show: s",
+          "quit: q"
+        ].join("  ")
       end
     end
   end
