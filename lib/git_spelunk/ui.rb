@@ -36,7 +36,7 @@ module GitSpelunk
     end
 
     def calculate_heights!
-      @repo_height = (Curses.lines.to_f * 0.20).to_i
+      @repo_height = [(Curses.lines.to_f * 0.20).to_i, 6].max
       @pager_height = Curses.lines  - @repo_height - 1
       @status_height = 1
     end

@@ -14,7 +14,7 @@ module GitSpelunk
         @window.setpos(0,0)
         draw_status_line
         @window.addstr(@content + "\n") if content
-        @window.addstr("\n" * (@height - @content.split("\n").size - 2))
+        @window.addstr("\n" * (@height - @content.split("\n").size - 1))
         @window.refresh
       end
 
