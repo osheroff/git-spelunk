@@ -12,6 +12,7 @@ Gem::Specification.new do |s|
   s.description = "git-spelunk is a terminal based exploration tool for git blame and history, based on the notion of moving in history based on file context"
 
   s.add_runtime_dependency("grit")
+  s.add_runtime_dependency("dispel")
 
   s.files = `git ls-files lib bin MIT-LICENSE.txt`.split("\n")
   s.license = "MIT"

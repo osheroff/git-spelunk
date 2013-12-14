@@ -1,39 +1,41 @@
-require 'git_spelunk/ui/window'
-require 'git_spelunk/ui/string_window'
 require 'git_spelunk/ui/pager'
 require 'git_spelunk/ui/repo'
 require 'git_spelunk/ui/status'
-require 'curses'
 
 module GitSpelunk
   class UI
     def initialize(file_context)
-      init_curses
+      Dispel::Screen.open(:colors => true) do |screen|
+        calculate_heights!
+        @file_context = file_context
+        @history = [file_context]
 
-      calculate_heights!
-      @file_context = file_context
-      @history = [file_context]
+        @pager = PagerWindow.new(@pager_height)
+        @pager.data = @file_context.get_blame
 
-      @pager = PagerWindow.new(@pager_height)
-      @pager.data = @file_context.get_blame
+        @repo = RepoWindow.new(@repo_height)
 
-      @repo = RepoWindow.new(@repo_height, @pager_height)
+        @status = StatusWindow.new
+        set_status_message
 
-      @status = StatusWindow.new(1, Curses.lines - 1)
-      set_status_message
+        screen.draw *draw
+        Dispel::Keyboard.output :timeout => 0.30 do |key|
+          handle_key(key)
+          screen.draw *draw
+        end
+      end
     end
 
-    def init_curses
-      Curses.init_screen
-      Curses.start_color
-      Curses.raw
-      Curses.nonl
-      Curses.noecho
-      Curses.curs_set(0)
-      screen = Curses.stdscr
-      screen.refresh
-      screen.keypad(1)
-      Curses.init_pair(ACTIVE_SHA_COLOR, Curses::COLOR_GREEN, Curses::COLOR_BLACK)
+    def draw
+      view1, style1 = @pager.draw
+      view2, style2 = @status.draw
+      view3, style3 = @repo.draw
+
+      [
+        [view1, view2, view3].join("\n"),
+        style1 + style2 + style3,
+        [Curses.lines, Curses.cols]
+      ]
     end
 
     def calculate_heights!
@@ -42,41 +44,8 @@ module GitSpelunk
       @status_height = 1
     end
 
-    def run
-      @repo.content = @file_context.get_line_commit_info(@pager.cursor)
-      pause_thread
-      begin
-        [@pager, @repo, @status].each(&:draw)
-        handle_key(Curses.getch)
-      end while true
-    end
-
     def set_status_message
       @status.status_message = "#{@file_context.file} @ #{@file_context.sha}"
-    end
-
-    def pause_thread
-      Thread.abort_on_exception = true
-      Thread.new do
-        while true
-          if heartbeat_expired? && @last_line != @pager.cursor
-            current_line = @pager.cursor
-            content = @file_context.get_line_commit_info(current_line)
-            if heartbeat_expired? && @pager.cursor == current_line
-              @repo.content = content
-              @repo.draw
-              @last_line = current_line
-            else
-              @heartbeat = Time.now
-            end
-          end
-          sleep 0.05
-        end
-      end
-    end
-
-    def heartbeat_expired?
-      @heartbeat && (Time.now - @heartbeat).to_f > 0.30
     end
 
     def after_navigation
@@ -124,85 +93,75 @@ module GitSpelunk
     end
 
     def handle_key(key)
-      @heartbeat = Time.now
       case key
-      when Curses::KEY_DOWN, 'j'
-        @pager.cursordown
-        after_navigation
-      when Curses::KEY_UP, '-', 'k'
-        @pager.cursorup
-        after_navigation
-      when Curses::KEY_CTRL_D, ' '
+      when :"Ctrl+d", ' '
         @pager.pagedown
         after_navigation
-      when Curses::KEY_CTRL_U
+      when :"Ctrl+u"
         @pager.pageup
         after_navigation
-      when *(0..9).to_a.map(&:to_s)
-        @status.command_buffer += key
-      when Curses::KEY_CTRL_M
-        if @status.command_buffer != ''
-          @pager.go_to(@status.command_buffer.to_i)
-        end
-        after_navigation
-      when 'G'
-        if @status.command_buffer != ''
-          @pager.go_to(@status.command_buffer.to_i)
-        else
-          @pager.go_bottom
-        end
-        after_navigation
-      when '['
-        history_back
-      when ']'
-        history_forward
-      when 's'
-        @heartbeat = nil
-        sha = @file_context.sha_for_line(@pager.cursor)
-        Curses.close_screen
-        system("git -p --git-dir='#{@file_context.repo.path}' show #{sha} | less")
-        Curses.stdscr.refresh
-      when '/', '?'
-        @heartbeat = nil
-        @status.command_buffer = key
-        @status.draw
-
-        line = getline
-        if line
-          @pager.search(line, false, key == '?')
-        end
-        @status.exit_command_mode!
-      when 'n'
-        @pager.search(nil, true, false)
-        after_navigation
-      when 'N'
-        @pager.search(nil, true, true)
-        after_navigation
-      when 'q', Curses::KEY_CTRL_C
+      when :"Ctrl+c"
         exit
-      end
-    end
-
-    # you'd really think there was a better way
-    def getline
-      while ch = Curses.getch
-        case ch
-        when Curses::KEY_CTRL_C
-          @status.command_buffer = ''
-          return
-        when Curses::KEY_CTRL_M
-          return @status.command_buffer[1..-1]
-        when Curses::KEY_BACKSPACE, Curses::KEY_CTRL_H, 127
-          if @status.command_buffer == "/"
-            return
+      when :escape
+        @pager.search_term = nil
+        @status.exit_command_mode!
+        @typing = false
+      when :timeout
+        # TODO performance only set if cursor/line changed
+        @repo.content = @file_context.get_line_commit_info(@pager.cursor)
+      else
+        if @typing
+          case key
+          when String
+            @status.command_buffer << key
+          when :enter
+            if @typing == :search
+              @pager.search(@status.command_buffer, false, key == '?')
+            elsif @typing == :goto
+              if @status.command_buffer != ''
+                @pager.go_to(@status.command_buffer.to_i)
+              else
+                @pager.go_bottom
+              end
+              after_navigation
+            end
+            @typing = false
           end
-          @status.command_buffer.chop!
         else
-          if ch.is_a?(String)
-            @status.command_buffer += ch
+          case key
+          when :down, 'j'
+            @pager.cursordown
+            after_navigation
+          when :up, '-', 'k'
+            @pager.cursorup
+            after_navigation
+          when 'G'
+            @status.command_buffer = ""
+            @typing = :goto
+          when *(0..9).to_a.map(&:to_s)
+            @status.command_buffer = key
+            @typing = :goto
+          when '['
+            history_back
+          when ']'
+            history_forward
+          when 's'
+            sha = @file_context.sha_for_line(@pager.cursor)
+            Curses.close_screen
+            system("git -p --git-dir='#{@file_context.repo.path}' show #{sha} | less")
+          when '/', '?'
+            @status.command_buffer = ""
+            @typing = :search
+          when 'n'
+            @pager.search(nil, true, false)
+            after_navigation
+          when 'N'
+            @pager.search(nil, true, true)
+            after_navigation
+          when 'q'
+            exit
           end
         end
-        @status.draw
       end
     end
   end

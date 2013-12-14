@@ -1,15 +1,15 @@
 module GitSpelunk
   class UI
-    class RepoWindow < StringWindow
+    class RepoWindow
       attr_accessor :content, :command_mode, :command_buffer
 
-      def initialize(height, offset)
-        super
+      def initialize(height)
+        @height = height
         self.content = ""
       end
 
-      def string
-        status_line + "\n" + content
+      def draw
+        [status_line + "\n" + content, Dispel::StyleMap.new(@height)]
       end
 
       private

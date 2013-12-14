@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 $LOAD_PATH.unshift File.expand_path("../../lib", __FILE__)
 require 'git_spelunk'
+require 'dispel'
 require 'optparse'
 
 def parse_options(argv)
@@ -31,6 +32,10 @@ file = ARGV[0]
 file, line = file.split(':',2) if file.include?(':')
 options[:line_number] = line
 
+def log(stuff)
+  File.open('spelunk.log','ab'){|f| f.puts stuff }
+end
+
 file_context = GitSpelunk::FileContext.new(file, options)
 ui = GitSpelunk::UI.new(file_context)
-ui.run
+#ui.run

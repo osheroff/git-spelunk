@@ -7,3 +7,4 @@ gem 'bump'
 gem 'rake'
 gem 'minitest'
 gem 'minitest-rg'
+#gem 'dispel', :path => "../dispel"

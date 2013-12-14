@@ -3,56 +3,57 @@ require 'curses'
 ACTIVE_SHA_COLOR=1
 module GitSpelunk
   class UI
-    class PagerWindow < Window
+    class PagerWindow
+      ACTIVE_SHA_COLOR = ["#ff0000", "#000000"]
+      FOUND_COLOR = ["#00ff00", "#000000"]
+      CURRENT_COLOR = ["#ffffff", "#444444"]
+
       def initialize(height)
-        @window = Curses::Window.new(height, Curses.cols, 0, 0)
         @height = height
         @cursor = 1
         @top = 1
         @highlight_sha = true
       end
 
-      attr_accessor :data, :highlight_sha
+      attr_accessor :data, :highlight_sha, :search_term
       attr_reader :cursor, :top
 
       def draw
-        @window.clear
-        @window.setpos(0,0)
+        styles = Dispel::StyleMap.new(@height)
+
         line_number_width = (data.size + 1).to_s.size
 
         active_sha = data[@cursor - 1][0]
 
-        data[@top - 1,@height].each_with_index do |b, i|
+        view = Array.new(@height)
+
+        data[@top - 1,@height].each_with_index.map do |b, i|
+          line = view[i] = ""
           sha, content = *b
           line_number = i + @top
+          content_start = (sha.size + line_number_width + 2)
 
           if sha == active_sha && highlight_sha
-            @window.attron(Curses::color_pair(ACTIVE_SHA_COLOR))
+            styles.add(ACTIVE_SHA_COLOR, i, 0...sha.size)
           end
 
           if @cursor == line_number
-            with_highlighting { @window.addstr(sha) }
-          else
-            @window.addstr(sha)
+            styles.add(CURRENT_COLOR, i, content_start...999)
           end
+          line << sha
 
-          @window.addstr(" %*s " % [line_number_width, line_number])
+          line << " %*s " % [line_number_width, line_number]
+          line << content
+
           if @search_term
-            content.split(/(#{@search_term})/).each do |t|
-              if t == @search_term
-                @window.attron(Curses::A_STANDOUT)
-              end
-              @window.addstr(t[0,line_remainder])
-              @window.attroff(Curses::A_STANDOUT)
+            Dispel::Tools.indexes(content, @search_term).each do |found|
+              found = content_start + found
+              styles.add(FOUND_COLOR, i, found..(found + @search_term.size))
             end
-          else
-            @window.addstr(content[0,line_remainder])
           end
-          @window.addstr("\n")
-          @window.attroff(Curses::color_pair(ACTIVE_SHA_COLOR))
-        end
-        @window.refresh
-        @window.setpos(0,0)
+        end.join("\n")
+
+        [view, styles]
       end
 
       attr_accessor :top
