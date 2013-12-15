@@ -113,17 +113,16 @@ module GitSpelunk
         if @typing
           case key
           when String
-            @status.command_buffer << key
+            if key == "G" && @typing == :goto
+              execute_goto
+            else
+              @status.command_buffer << key
+            end
           when :enter
             if @typing == :search
               @pager.search(@status.command_buffer, false, key == '?')
             elsif @typing == :goto
-              if @status.command_buffer != ''
-                @pager.go_to(@status.command_buffer.to_i)
-              else
-                @pager.go_bottom
-              end
-              after_navigation
+              execute_goto
             end
             @typing = false
           end
@@ -135,9 +134,6 @@ module GitSpelunk
           when :up, '-', 'k'
             @pager.cursorup
             after_navigation
-          when 'G'
-            @status.command_buffer = ""
-            @typing = :goto
           when *(0..9).to_a.map(&:to_s)
             @status.command_buffer = key
             @typing = :goto
@@ -163,6 +159,15 @@ module GitSpelunk
           end
         end
       end
+    end
+
+    def execute_goto
+      if @status.command_buffer != ''
+        @pager.go_to(@status.command_buffer.to_i)
+      else
+        @pager.go_bottom
+      end
+      after_navigation
     end
   end
 end
