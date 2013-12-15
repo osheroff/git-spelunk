@@ -42,8 +42,7 @@ module GitSpelunk
     end
 
     def run
-      @repo.content = @file_context.get_line_commit_info(@pager.cursor)
-      pause_thread
+      @repo.content = @file_context.get_line_commit_info(@pager.blame_line)
       begin
         [@pager, @repo, @status].each(&:draw)
         handle_key(Curses.getch)
@@ -54,44 +53,21 @@ module GitSpelunk
       @status.status_message = "#{@file_context.file} @ #{@file_context.sha}"
     end
 
-    def pause_thread
-      Thread.abort_on_exception = true
-      Thread.new do
-        while true
-          if heartbeat_expired? && @last_line != @pager.cursor
-            current_line = @pager.cursor
-            content = @file_context.get_line_commit_info(current_line)
-            if heartbeat_expired? && @pager.cursor == current_line
-              @repo.content = content
-              @repo.draw
-              @last_line = current_line
-            else
-              @heartbeat = Time.now
-            end
-          end
-          sleep 0.05
-        end
-      end
-    end
-
-    def heartbeat_expired?
-      @heartbeat && (Time.now - @heartbeat).to_f > 0.30
-    end
-
     def after_navigation
       @pager.highlight_sha = true
+      @repo.content = @file_context.get_line_commit_info(@pager.blame_line)
+      @repo.draw
       @status.exit_command_mode!
       @status.clear_onetime_message!
     end
 
     def history_back
       @status.set_onetime_message("Rewinding...")
-      goto = @file_context.get_line_for_sha_parent(@pager.cursor)
+      goto = @file_context.get_line_for_sha_parent(@pager.blame_line)
       if goto.is_a?(Fixnum)
-        @file_context.line_number = @pager.cursor
         @history.push(@file_context)
 
-        @file_context = @file_context.clone_for_parent_sha(@pager.cursor)
+        @file_context = @file_context.clone_for_parent_sha(@pager.blame_line.sha)
         @pager.data = @file_context.get_blame
         @pager.go_to(goto)
 
@@ -123,7 +99,6 @@ module GitSpelunk
     end
 
     def handle_key(key)
-      @heartbeat = Time.now
       case key
       when Curses::KEY_DOWN, 'j'
         @pager.cursordown
@@ -156,13 +131,11 @@ module GitSpelunk
       when ']'
         history_forward
       when 's'
-        @heartbeat = nil
-        sha = @file_context.sha_for_line(@pager.cursor)
+        sha = @pager.blame_line.sha
         Curses.close_screen
         system("git -p --git-dir='#{@file_context.repo.path}' show #{sha} | less")
         Curses.stdscr.refresh
       when '/', '?'
-        @heartbeat = nil
         @status.command_buffer = key
         @status.draw
 

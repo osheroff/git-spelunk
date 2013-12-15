@@ -22,13 +22,13 @@ module GitSpelunk
     end
 
 
-    def clone_for_parent_sha(line_number)
-      new_sha = sha_for_line(line_number) + "~1"
+    def clone_for_parent_sha(sha)
+      new_sha = sha + "~1"
       GitSpelunk::FileContext.new(@file, {:sha => new_sha, :repo => @repo, :file => @file})
     end
 
-    def get_line_for_sha_parent(line_number)
-      o = GitSpelunk::Offset.new(@repo, @file, sha_for_line(line_number), @new_to_old[line_number])
+    def get_line_for_sha_parent(blame_line)
+      o = GitSpelunk::Offset.new(@repo, @file, blame_line.sha, blame_line.old_line_number)
       o.line_number_to_parent
     end
 
@@ -51,23 +51,13 @@ module GitSpelunk
       @blame_data ||= begin
         @new_to_old = {}
         @line_to_sha = {}
-        blame = GitSpelunk::Blame.new(@repo, @file, @sha)
-        blame.lines.each do |line|
-          @new_to_old[line.line_number] = line.old_line_number
-        end
-        blame.lines
+        GitSpelunk::Blame.new(@repo, @file, @sha).lines
       end
-      @blame_data
     end
 
-    def sha_for_line(line)
-      @blame_data[line - 1].sha
-    end
-
-    def get_line_commit_info(line)
+    def get_line_commit_info(blame_line)
       get_blame
-      abbrev = sha_for_line(line)
-      commit = (@commit_cache[abbrev] ||= @repo.commit(abbrev))
+      commit = blame_line.commit
       return nil unless commit
 
       author_info = commit.author_string.split(" ")

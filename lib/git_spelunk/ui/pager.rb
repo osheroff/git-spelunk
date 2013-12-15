@@ -65,7 +65,7 @@ module GitSpelunk
       def find_next_index(term, start, reverse)
         i = start
         while i < data.size && i >= 0
-          if data[i][1] =~ /#{term}/
+          if data[i].content =~ /#{term}/
             return i
           end
           i += reverse ? -1 : 1
