@@ -12,18 +12,22 @@ module GitSpelunk
         @highlight_sha = true
       end
 
+      def blame_line
+        @data[@cursor - 1]
+      end
+
       attr_accessor :data, :highlight_sha
-      attr_reader :cursor, :top
+      attr_reader :cursor, :top, :data
 
       def draw
         @window.clear
         @window.setpos(0,0)
         line_number_width = (data.size + 1).to_s.size
 
-        active_sha = data[@cursor - 1][0]
+        active_sha = blame_line.sha
 
         data[@top - 1,@height].each_with_index do |b, i|
-          sha, content = *b
+          sha, content = b.sha, b.content
           line_number = i + @top
 
           if sha == active_sha && highlight_sha
@@ -31,9 +35,9 @@ module GitSpelunk
           end
 
           if @cursor == line_number
-            with_highlighting { @window.addstr(sha) }
+            with_highlighting { @window.addstr(sha[0..6]) }
           else
-            @window.addstr(sha)
+            @window.addstr(sha[0..6])
           end
 
           @window.addstr(" %*s " % [line_number_width, line_number])
@@ -61,7 +65,7 @@ module GitSpelunk
       def find_next_index(term, start, reverse)
         i = start
         while i < data.size && i >= 0
-          if data[i][1] =~ /#{term}/
+          if data[i].content =~ /#{term}/
             return i
           end
           i += reverse ? -1 : 1
