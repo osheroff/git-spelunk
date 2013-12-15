@@ -31,10 +31,16 @@ module GitSpelunk
       view2, style2 = @repo.draw
       view3, style3 = @status.draw
 
+      cursor = if @typing
+        [@pager_height + @repo_height, @status.command_buffer.size + 1]
+      else
+        [Curses.lines, Curses.cols]
+      end
+
       [
         [view1, view2, view3].join("\n"),
         style1 + style2 + style3,
-        [Curses.lines, Curses.cols]
+        cursor
       ]
     end
 
