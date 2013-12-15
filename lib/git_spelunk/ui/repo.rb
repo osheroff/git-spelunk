@@ -9,7 +9,9 @@ module GitSpelunk
       end
 
       def draw
-        [status_line + "\n" + content, Dispel::StyleMap.new(@height)]
+        styles = Dispel::StyleMap.new(@height)
+        styles.add(:reverse, 0, 0..999)
+        [status_line + "\n" + content, styles]
       end
 
       private

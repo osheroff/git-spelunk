@@ -28,7 +28,7 @@ module GitSpelunk
           ":" + command_buffer
         else
           message = (@onetime_message || @status_message)
-          styles.add(["#ff0000", "#000000"], 0, 0...message.size)
+          styles.add(:reverse, 0, 0...999)
           message
         end
 

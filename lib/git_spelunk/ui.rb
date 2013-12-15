@@ -28,8 +28,8 @@ module GitSpelunk
 
     def draw
       view1, style1 = @pager.draw
-      view2, style2 = @status.draw
-      view3, style3 = @repo.draw
+      view2, style2 = @repo.draw
+      view3, style3 = @status.draw
 
       [
         [view1, view2, view3].join("\n"),

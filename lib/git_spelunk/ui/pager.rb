@@ -4,9 +4,9 @@ ACTIVE_SHA_COLOR=1
 module GitSpelunk
   class UI
     class PagerWindow
-      ACTIVE_SHA_COLOR = ["#ff0000", "#000000"]
+      ACTIVE_SHA_COLOR = ["#00ff00", "#000000"]
       FOUND_COLOR = ["#00ff00", "#000000"]
-      CURRENT_COLOR = ["#ffffff", "#444444"]
+      CURRENT_COLOR = ["#000000", "#00ff00"]
 
       def initialize(height)
         @height = height
@@ -34,11 +34,11 @@ module GitSpelunk
           content_start = (sha.size + line_number_width + 2)
 
           if sha == active_sha && highlight_sha
-            styles.add(ACTIVE_SHA_COLOR, i, 0...sha.size)
+            styles.add(ACTIVE_SHA_COLOR, i, 0...999)
           end
 
           if @cursor == line_number
-            styles.add(CURRENT_COLOR, i, content_start...999)
+            styles.add(CURRENT_COLOR, i, 0..sha.size)
           end
           line << sha
 
