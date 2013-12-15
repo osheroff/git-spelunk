@@ -42,7 +42,7 @@ module GitSpelunk
     end
 
     def run
-      @repo.content = @file_context.get_line_commit_info(@pager.blame_line)
+      set_repo_content
       begin
         [@pager, @repo, @status].each(&:draw)
         handle_key(Curses.getch)
@@ -53,10 +53,15 @@ module GitSpelunk
       @status.status_message = "#{@file_context.file} @ #{@file_context.sha}"
     end
 
-    def after_navigation
-      @pager.highlight_sha = true
+    def set_repo_content
       @repo.content = @file_context.get_line_commit_info(@pager.blame_line)
       @repo.draw
+    end
+
+    def after_navigation
+      @pager.highlight_sha = true
+      @file_context.line_number = @pager.cursor
+      set_repo_content
       @status.exit_command_mode!
       @status.clear_onetime_message!
     end
@@ -67,11 +72,11 @@ module GitSpelunk
       if goto.is_a?(Fixnum)
         @history.push(@file_context)
 
-        @file_context = @file_context.clone_for_parent_sha(@pager.blame_line.sha)
+        @file_context = @file_context.clone_for_blame_line(@pager.blame_line)
         @pager.data = @file_context.get_blame
         @pager.go_to(goto)
 
-        # force commit info update
+        set_repo_content
         @status.clear_onetime_message!
         set_status_message
         @last_line = nil
@@ -89,6 +94,7 @@ module GitSpelunk
         @file_context = @history.pop
         @pager.data = @file_context.get_blame
         @pager.go_to(@file_context.line_number)
+        set_repo_content
 
         @status.clear_onetime_message!
         set_status_message

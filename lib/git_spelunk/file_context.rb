@@ -21,14 +21,13 @@ module GitSpelunk
       @commit_cache = {}
     end
 
-
-    def clone_for_parent_sha(sha)
-      new_sha = sha + "~1"
-      GitSpelunk::FileContext.new(@file, {:sha => new_sha, :repo => @repo, :file => @file})
+    def clone_for_blame_line(blame_line)
+      new_sha = blame_line.sha + "~1"
+      GitSpelunk::FileContext.new(blame_line.filename, {:sha => new_sha, :repo => @repo, :file => blame_line.filename})
     end
 
     def get_line_for_sha_parent(blame_line)
-      o = GitSpelunk::Offset.new(@repo, @file, blame_line.sha, blame_line.old_line_number)
+      o = GitSpelunk::Offset.new(@repo, blame_line.filename, blame_line.sha, blame_line.old_line_number)
       o.line_number_to_parent
     end
 
