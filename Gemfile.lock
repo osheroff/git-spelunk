@@ -17,7 +17,7 @@ GEM
     debugger-linecache (1.2.0)
     debugger-ruby_core_source (1.2.3)
     diff-lcs (1.2.5)
-    dispel (0.0.2)
+    dispel (0.0.3)
     grit (2.5.0)
       diff-lcs (~> 1.1)
       mime-types (~> 1.15)
