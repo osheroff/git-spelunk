@@ -2,7 +2,7 @@ module GitSpelunk
   class UI
     class StatusWindow
       def initialize
-        @command_buffer = nil
+        @command_buffer = ""
         @status_message = ""
         @onetime_message = nil
       end
@@ -24,7 +24,7 @@ module GitSpelunk
       def draw
         styles = Dispel::StyleMap.new(1)
 
-        view = if command_buffer
+        view = if command_buffer.size > 0
           ":" + command_buffer
         else
           message = (@onetime_message || @status_message)

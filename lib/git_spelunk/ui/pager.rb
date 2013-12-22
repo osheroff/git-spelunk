@@ -48,7 +48,7 @@ module GitSpelunk
           if @search_term
             Dispel::Tools.indexes(content, @search_term).each do |found|
               found = content_start + found
-              styles.add(FOUND_COLOR, i, found..(found + @search_term.size))
+              styles.add(FOUND_COLOR, i, found...(found + @search_term.size))
             end
           end
         end.join("\n")
@@ -142,7 +142,6 @@ module GitSpelunk
         @top = @cursor - previous_offset
         adjust_top!
       end
-
 
       def go_bottom
         @cursor = data.size
