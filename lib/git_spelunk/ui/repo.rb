@@ -11,7 +11,9 @@ module GitSpelunk
       def draw
         styles = Dispel::StyleMap.new(@height)
         styles.add(:reverse, 0, 0..999)
-        [status_line + "\n" + content, styles]
+        view = [status_line] + content.split("\n")
+        view = Array.new(@height).each_with_index.map {|_,i| view[i] }
+        [view, styles]
       end
 
       private
