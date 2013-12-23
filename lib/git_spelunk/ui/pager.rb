@@ -5,7 +5,7 @@ module GitSpelunk
   class UI
     class PagerWindow
       ACTIVE_SHA_COLOR = ["#00ff00", "#000000"]
-      FOUND_COLOR = ["#00ff00", "#000000"]
+      FOUND_COLOR = :reverse
       CURRENT_COLOR = ["#000000", "#00ff00"]
 
       def initialize(height)

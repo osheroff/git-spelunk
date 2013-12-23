@@ -18,7 +18,7 @@ module GitSpelunk
       end
 
       def exit_command_mode!
-        self.command_buffer = nil
+        self.command_buffer = ""
       end
 
       def draw
