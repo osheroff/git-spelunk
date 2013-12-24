@@ -54,27 +54,32 @@ module GitSpelunk
       @status.status_message = "#{@file_context.file} @ #{@file_context.sha}"
     end
 
+    def set_repo_content
+      @repo.content = @file_context.get_line_commit_info(@pager.blame_line)
+      @repo.draw
+    end
+
     def after_navigation
       @pager.highlight_sha = true
+      set_repo_content
       @status.exit_command_mode!
       @status.clear_onetime_message!
     end
 
     def history_back
       @status.set_onetime_message("Rewinding...")
-      goto = @file_context.get_line_for_sha_parent(@pager.cursor)
+      goto = @file_context.get_line_for_sha_parent(@pager.blame_line)
       if goto.is_a?(Fixnum)
         @file_context.line_number = @pager.cursor
         @history.push(@file_context)
 
-        @file_context = @file_context.clone_for_parent_sha(@pager.cursor)
+        @file_context = @file_context.clone_for_blame_line(@pager.blame_line)
         @pager.data = @file_context.get_blame
         @pager.go_to(goto)
 
-        # force commit info update
+        set_repo_content
         @status.clear_onetime_message!
         set_status_message
-        @last_line = nil
       elsif goto == :at_beginning_of_time
         @status.set_onetime_message("At beginning of repository history!")
       elsif goto == :unable_to_trace
@@ -89,12 +94,10 @@ module GitSpelunk
         @file_context = @history.pop
         @pager.data = @file_context.get_blame
         @pager.go_to(@file_context.line_number)
+        set_repo_content
 
         @status.clear_onetime_message!
         set_status_message
-
-        # force commit info update
-        @last_line = nil
       end
     end
 
@@ -112,9 +115,6 @@ module GitSpelunk
         @pager.search_term = nil
         @status.exit_command_mode!
         @typing = false
-      when :timeout
-        # TODO performance only set if cursor/line changed
-        @repo.content = @file_context.get_line_commit_info(@pager.cursor)
       else
         if typing?
           case key

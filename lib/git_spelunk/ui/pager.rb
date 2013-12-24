@@ -16,20 +16,25 @@ module GitSpelunk
       end
 
       attr_accessor :data, :highlight_sha, :search_term
-      attr_reader :cursor, :top
+      attr_reader :cursor, :top, :data
+
+      def blame_line
+        @data[@cursor - 1]
+      end
 
       def draw
         styles = Dispel::StyleMap.new(@height)
 
         line_number_width = (data.size + 1).to_s.size
 
-        active_sha = data[@cursor - 1][0]
+        active_sha = blame_line.sha
 
         view = Array.new(@height)
 
         data[@top - 1,@height].each_with_index.map do |b, i|
           line = view[i] = ""
-          sha, content = *b
+          sha, content = b.sha, b.content
+
           line_number = i + @top
           content_start = (sha.size + line_number_width + 2)
 
@@ -37,10 +42,12 @@ module GitSpelunk
             styles.add(ACTIVE_SHA_COLOR, i, 0...999)
           end
 
+          sha_abbrev = sha[0..6]
           if @cursor == line_number
-            styles.add(CURRENT_COLOR, i, 0..sha.size)
+            styles.add(CURRENT_COLOR, i, 0..sha_abbrev.size)
           end
-          line << sha
+
+          line << sha_abbrev
 
           line << " %*s " % [line_number_width, line_number]
           line << content
@@ -62,7 +69,7 @@ module GitSpelunk
       def find_next_index(term, start, reverse)
         i = start
         while i < data.size && i >= 0
-          if data[i][1] =~ /#{term}/
+          if data[i].content =~ /#{term}/
             return i
           end
           i += reverse ? -1 : 1
