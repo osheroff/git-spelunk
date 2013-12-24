@@ -14,6 +14,7 @@ module GitSpelunk
         @pager.data = @file_context.get_blame
 
         @repo = RepoWindow.new(@repo_height)
+        set_repo_content
 
         @status = StatusWindow.new
         set_status_message
