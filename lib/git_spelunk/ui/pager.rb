@@ -42,9 +42,9 @@ module GitSpelunk
             styles.add(ACTIVE_SHA_COLOR, i, 0...999)
           end
 
-          sha_abbrev = sha[0..6]
+          sha_abbrev = sha[0..5]
           if @cursor == line_number
-            styles.add(CURRENT_COLOR, i, 0..sha_abbrev.size)
+            styles.add(CURRENT_COLOR, i, 0..(sha_abbrev.size - 1))
           end
 
           line << sha_abbrev
