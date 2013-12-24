@@ -151,7 +151,7 @@ module GitSpelunk
           when ']'
             history_forward
           when 's'
-            sha = @file_context.sha_for_line(@pager.cursor)
+            sha = @pager.blame_line.sha
             Curses.close_screen
             system("git -p --git-dir='#{@file_context.repo.path}' show #{sha} | less")
           when '/', '?'
