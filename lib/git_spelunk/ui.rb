@@ -61,7 +61,6 @@ module GitSpelunk
     end
 
     def history_back
-      @status.set_onetime_message("Rewinding...")
       goto = @file_context.get_line_for_sha_parent(@pager.cursor)
       if goto.is_a?(Fixnum)
         @file_context.line_number = @pager.cursor
@@ -99,6 +98,12 @@ module GitSpelunk
     end
 
     def handle_key(key)
+      if @todo
+        send(@todo)
+        @todo = nil
+        return
+      end
+
       case key
       when :"Ctrl+d", ' ', :page_down
         @pager.pagedown
@@ -147,7 +152,8 @@ module GitSpelunk
             @status.command_buffer = key
             @typing = :goto
           when '['
-            history_back
+            @status.set_onetime_message("Rewinding...")
+            @todo = :history_back
           when ']'
             history_forward
           when 's'
