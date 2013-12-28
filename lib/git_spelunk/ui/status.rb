@@ -1,9 +1,7 @@
 module GitSpelunk
   class UI
-    class StatusWindow < Window
-      def initialize(height, offset)
-        @window = Curses::Window.new(height, Curses.cols, offset, 0)
-        @offset = offset
+    class StatusWindow
+      def initialize
         @command_buffer = ""
         @status_message = ""
         @onetime_message = nil
@@ -17,32 +15,24 @@ module GitSpelunk
 
       def set_onetime_message(message)
         @onetime_message = message
-        draw
       end
 
       def exit_command_mode!
         self.command_buffer = ""
       end
 
-      def set_cursor
-        Curses::stdscr.setpos(@offset, command_buffer.size + 1)
-      end
-
       def draw
-        @window.setpos(0,0)
-        if !command_buffer.empty?
-          Curses.curs_set(1)
-          @window.addstr(":" + command_buffer)
-          @window.addstr(" " * line_remainder)
+        styles = Dispel::StyleMap.new(1)
+
+        view = if command_buffer.size > 0
+          ":" + command_buffer
         else
-          Curses.curs_set(0)
-          with_highlighting do
-            @window.addstr(@onetime_message || @status_message)
-            @window.addstr(" " * line_remainder + "\n")
-          end
+          message = (@onetime_message || @status_message)
+          styles.add(:reverse, 0, 0...999)
+          message
         end
-        set_cursor
-        @window.refresh
+
+        [view, styles]
       end
     end
   end
