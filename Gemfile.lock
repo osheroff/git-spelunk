@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    git_spelunk (0.3.0)
+    git_spelunk (0.3.1)
       dispel
       grit
 
