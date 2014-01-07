@@ -36,7 +36,6 @@ module GitSpelunk
           sha, content = b.sha, b.content
 
           line_number = i + @top
-          content_start = (sha.size + line_number_width + 2)
 
           if sha == active_sha && highlight_sha
             styles.add(ACTIVE_SHA_COLOR, i, 0...999)
@@ -51,6 +50,8 @@ module GitSpelunk
 
           line << " %*s " % [line_number_width, line_number]
           line << content
+
+          content_start = (sha_abbrev.size + line_number_width + 2)
 
           if @search_term
             Dispel::Tools.indexes(content, @search_term).each do |found|
