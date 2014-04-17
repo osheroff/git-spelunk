@@ -2,9 +2,8 @@ source "https://rubygems.org"
 
 gemspec
 
-gem 'debugger'
-gem 'bump'
+gem 'debugger', :platforms => :mri
+gem 'bump', :platforms => :mri
 gem 'rake'
 gem 'minitest'
 gem 'minitest-rg'
-#gem 'dispel', :path => "../dispel"
