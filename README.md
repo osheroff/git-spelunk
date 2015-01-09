@@ -2,6 +2,8 @@
 
 This is git-spelunk, an interactive tool for exploring blame history.
 
+Install with `gem install git_spelunk` (requires Ruby 2+).
+
 ## Huh?
 
 `git blame` is a great tool for determining code responsibility.  But sometimes when you
