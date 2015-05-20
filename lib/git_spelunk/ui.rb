@@ -104,7 +104,7 @@ module GitSpelunk
 
     def handle_key(key)
       case key
-      when :"Ctrl+d", ' ', :page_down
+      when :"Ctrl+d", :page_down
         @pager.pagedown
         after_navigation
       when :"Ctrl+u", :page_up
@@ -163,6 +163,9 @@ module GitSpelunk
             after_navigation
           when 'N'
             @pager.search(nil, true, true)
+            after_navigation
+          when ' '
+            @pager.pagedown
             after_navigation
           when 'q'
             exit
