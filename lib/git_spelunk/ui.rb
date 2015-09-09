@@ -74,13 +74,15 @@ module GitSpelunk
         @file_context.line_number = @pager.cursor
         @history.push(@file_context)
 
+
         @file_context = @file_context.clone_for_blame_line(@pager.blame_line)
         @pager.data = @file_context.get_blame
         @pager.go_to(goto)
 
         set_repo_content
+        @status.status_message = "went to #{goto}"
         @status.clear_onetime_message!
-        set_status_message
+        #set_status_message
       elsif goto == :at_beginning_of_time
         @status.set_onetime_message("At beginning of repository history!")
       elsif goto == :unable_to_trace

@@ -47,8 +47,90 @@ module GitSpelunk
       true
     end
 
+    STATS_PATTERN=/@@ \-(\d+),(\d+) \+(\d+),(\d+) @@/
+    class Chunk
+      attr_reader :minus_offset, :minus_length, :plus_offset, :plus_length, :lines
+
+      def initialize(data)
+        @minus_offset, @minus_length, @plus_offset, @plus_length = *extract_stats(data[0])
+        @lines = data[1..-1]
+      end
+
+      def has_line?(line_number)
+        plus_offset <= line_number && line_number <= (plus_offset + plus_length)
+      end
+
+      def find_parent_line_number(target)
+        target_line_offset = target - self.plus_offset
+        current_line_offset = parent_line_offset = diff_index = 0
+
+        lines.each do |line|
+          break if current_line_offset == target_line_offset && src_line?(line)
+
+          if src_line?(line)
+            current_line_offset += 1
+          end
+
+          if parent_line?(line)
+            parent_line_offset += 1
+          end
+
+          diff_index += 1
+        end
+
+        # find last contiguous bit of diff, and try to offset into that.
+        removals = additions = 0
+        diff_index -= 1
+
+        while diff_index > 0
+          line = lines[diff_index]
+
+          break unless ["-", "+"].include?(line[0])
+
+          if parent_line?(line)
+            removals += 1
+          else
+            additions += 1
+          end
+
+          diff_index -= 1
+        end
+
+        forward_push = [additions, removals - 1].min
+        (parent_line_offset - removals) + forward_push
+      end
+
+      private
+
+      def extract_stats(l)
+        #@@ -1,355 +1,355 @@
+        l.scan(STATS_PATTERN).first.map(&:to_i)
+      end
+
+      def src_line?(line)
+        # Src line will either have a "+" or will be an unchanged line
+        line[0] != '-'
+      end
+
+      def parent_line?(line)
+        # Src line will either have a "-" or will be an unchanged line
+        line[0] != '+'
+      end
+    end
+
     def chunks
-      @chunks ||= diff_chunks(@repo.diff(@parent.id, @sha, @file_name))
+      @chunks ||= begin
+        diffs = @repo.diff(@parent.id, @sha, @file_name)
+        return nil if diffs.empty?
+
+        chunks = diffs[0].diff.split(/\n/).inject([[]]) do |arr, line|
+          arr.push([]) if line =~ STATS_PATTERN
+          arr.last << line
+          arr
+        end
+
+        chunks[1..-1].map { |c| Chunk.new(c) } # slice off first chunk -- it's just the filename
+      end
     end
 
     def at_beginning_of_time?
@@ -59,109 +141,20 @@ module GitSpelunk
       @parent && (@chunks.nil? || target_chunk.nil?)
     end
 
-    def first_commit_for_file?
-
-    end
-
     def line_number_to_parent
       return :at_beginning_of_time unless @parent && chunks
       chunk = target_chunk(@line_number)
       return :unable_to_trace unless chunk
 
-      parent_starting_line, parent_total_lines = parent_start_and_total(stats_line(chunk))
-      return :first_commit_for_file if parent_starting_line == 0 && parent_total_lines == 0
+      return :first_commit_for_file if chunk.minus_offset == 0 && chunk.minus_length == 0
 
-      chunk_starting_line, chunk_total_lines = src_start_and_total(stats_line(chunk))
-      parent_line_offset = find_parent_line_number(diff_lines(chunk), @line_number, chunk_starting_line, chunk_total_lines)
-      parent_starting_line + parent_line_offset
+      chunk.minus_offset + chunk.find_parent_line_number(@line_number)
     end
 
     private
 
-    def diff_chunks(diffs)
-      return nil if diffs.empty?
-      # split it into chunks: [["@@ -10,13 +10,18 @@", diffs], ["@@ -20,13 +20,18 @@", diffs, diff]]
-      multiple_chunks = diffs[0].diff.split(/(@@ \-\d+,\d+ \+\d+,\d+ @@.*?\n)/)
-      # Discard file name line
-      multiple_chunks[1..multiple_chunks.length].each_slice(2).to_a
-    end
-
-
     def target_chunk(line_number)
-      chunks.select {|chunk| has_line?(chunk, line_number)}[0]
-    end
-
-    def has_line?(chunk, line_number)
-      starting_line, total_lines = src_start_and_total(stats_line(chunk))
-      starting_line + total_lines >= line_number
-    end
-
-    def src_start_and_total(line)
-      # Get the offset and line number where lines were added
-      # @@ -3,10 +3,17 @@ optionally a line\n   unchnaged_line_1\n-    deleted_line_1\n+    new_line_1"
-      line.scan(/\+(\d+),(\d+)/).first.map { |str| str.to_i }
-    end
-
-    def parent_start_and_total(line)
-      line.scan(/\-(\d+),(\d+)/).first.map { |str| str.to_i }
-    end
-
-    def find_parent_line_number(lines, src_line_number, src_starting_line, src_number_of_lines)
-      target_line_offset = src_line_number - src_starting_line
-      current_line_offset = parent_line_offset = diff_index = 0
-
-      lines.each do |line|
-        break if current_line_offset == target_line_offset && src_line?(line)
-
-        if src_line?(line)
-          current_line_offset += 1
-        end
-
-        if parent_line?(line)
-          parent_line_offset += 1
-        end
-
-        diff_index += 1
-      end
-
-      # find last contiguous bit of diff, and try to offset into that.
-      removals = additions = 0
-      diff_index -= 1
-
-      while diff_index > 0
-        line = lines[diff_index]
-
-        break unless ["-", "+"].include?(line[0])
-
-        if parent_line?(line)
-          removals += 1
-        else
-          additions += 1
-        end
-
-        diff_index -= 1
-      end
-
-      forward_push = [additions, removals - 1].min
-      (parent_line_offset - removals) + forward_push
-    end
-
-    def src_line?(line)
-      # Src line will either have a "+" or will be an unchanged line
-      line[0] != '-'
-    end
-
-    def parent_line?(line)
-      # Src line will either have a "-" or will be an unchanged line
-      line[0] != '+'
-    end
-
-    def stats_line(chunk)
-      chunk[0]
-    end
-
-    def diff_lines(chunk)
-      chunk[1].split("\n")
+      chunks.find { |c| c.has_line?(line_number) }
     end
   end
 end

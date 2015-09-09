@@ -1,5 +1,3 @@
-require 'curses'
-
 ACTIVE_SHA_COLOR=1
 module GitSpelunk
   class UI
@@ -31,8 +29,8 @@ module GitSpelunk
 
         view = Array.new(@height)
 
-        data[@top - 1,@height].each_with_index.map do |b, i|
-          line = view[i] = ""
+        data[@top - 1, @height].each_with_index do |b, i|
+          line = ""
           sha, content = b.sha, b.content
 
           line_number = i + @top
@@ -59,7 +57,8 @@ module GitSpelunk
               styles.add(FOUND_COLOR, i, found...(found + @search_term.size))
             end
           end
-        end.join("\n")
+          view[i] = line
+        end
 
         [view, styles]
       end
