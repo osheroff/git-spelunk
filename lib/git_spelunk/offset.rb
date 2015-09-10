@@ -60,44 +60,64 @@ module GitSpelunk
         plus_offset <= line_number && line_number <= (plus_offset + plus_length)
       end
 
+      LineBlock = Struct.new(:offset, :data) do
+        def initialize(offset, line)
+          super(offset, [line])
+        end
+
+        def type
+          data.first[0]
+        end
+
+        def size
+          data.size
+        end
+
+        def <<(other)
+          data << other
+        end
+      end
+
       def find_parent_line_number(target)
-        target_line_offset = target - self.plus_offset
-        current_line_offset = parent_line_offset = diff_index = 0
+        # separate in blocks of lines with the same prefix
 
-        lines.each do |line|
-          break if current_line_offset == target_line_offset && src_line?(line)
+        old_line_number = minus_offset
+        new_line_number = plus_offset
 
-          if src_line?(line)
-            current_line_offset += 1
-          end
+        blocks = []
+        lines.each do |l|
+          next if l =~ /\\ No newline at end of file/
+          last_block = blocks.last
 
-          if parent_line?(line)
-            parent_line_offset += 1
-          end
-
-          diff_index += 1
-        end
-
-        # find last contiguous bit of diff, and try to offset into that.
-        removals = additions = 0
-        diff_index -= 1
-
-        while diff_index > 0
-          line = lines[diff_index]
-
-          break unless ["-", "+"].include?(line[0])
-
-          if parent_line?(line)
-            removals += 1
+          if last_block.nil? || last_block.type != l[0]
+            blocks << LineBlock.new(old_line_number, l)
           else
-            additions += 1
+            last_block << l
           end
 
-          diff_index -= 1
+          if l[0] == "+" || l[0] == " "
+            if new_line_number == target
+              # important: we don't finish building the structure.
+              break
+            end
+
+            new_line_number += 1
+          end
+
+          if l[0] == "-" || l[0] == " "
+            old_line_number += 1
+          end
         end
 
-        forward_push = [additions, removals - 1].min
-        (parent_line_offset - removals) + forward_push
+        addition_block = blocks.pop
+        last_old_block = blocks.last
+
+        if last_old_block.type == " "
+          last_old_block.offset + (last_old_block.size - 1)
+        else
+          # offset N lines into last block, but don't go beyond the edge of it.
+          last_old_block.offset + [addition_block.size - 1, last_old_block.size].min
+        end
       end
 
       private
@@ -107,14 +127,14 @@ module GitSpelunk
         l.scan(STATS_PATTERN).first.map(&:to_i)
       end
 
-      def src_line?(line)
+      def old_has?(line)
         # Src line will either have a "+" or will be an unchanged line
-        line[0] != '-'
+        line[0] == '-' || line[0] == " "
       end
 
-      def parent_line?(line)
+      def new_has?(line)
         # Src line will either have a "-" or will be an unchanged line
-        line[0] != '+'
+        line[0] == '+' || line[0] == " "
       end
     end
 
@@ -148,7 +168,7 @@ module GitSpelunk
 
       return :first_commit_for_file if chunk.minus_offset == 0 && chunk.minus_length == 0
 
-      chunk.minus_offset + chunk.find_parent_line_number(@line_number)
+      chunk.find_parent_line_number(@line_number)
     end
 
     private
