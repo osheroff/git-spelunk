@@ -47,7 +47,8 @@ module GitSpelunk
           line << sha_abbrev
 
           line << " %*s " % [line_number_width, line_number]
-          line << content
+          line << content.gsub(/\r/, '')
+
 
           content_start = (sha_abbrev.size + line_number_width + 2)
 
@@ -59,7 +60,6 @@ module GitSpelunk
           end
           view[i] = line
         end
-
         [view, styles]
       end
 
