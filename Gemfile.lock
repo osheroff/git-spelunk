@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    git_spelunk (0.3.2)
+    git_spelunk (0.4.0)
       curses
       dispel
       grit
@@ -45,3 +45,6 @@ DEPENDENCIES
   minitest
   minitest-rg
   rake
+
+BUNDLED WITH
+   1.10.6
