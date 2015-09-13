@@ -37,5 +37,12 @@ def log(stuff)
 end
 
 file_context = GitSpelunk::FileContext.new(file, options)
+
+if file_context.get_blame.empty?
+  $stderr.puts("No git information found for '#{file}'")
+  exit 1
+end
+
 ui = GitSpelunk::UI.new(file_context)
+
 #ui.run
