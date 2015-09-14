@@ -2,34 +2,38 @@ module GitSpelunk
   BlameLine = Struct.new(:line_number, :old_line_number, :sha, :commit, :filename, :content)
   class Blame < Grit::Blame
     def process_raw_blame(output)
-      lines, final = [], []
-      info, commits = {}, {}
+      lines = []
+      commits = {}
+      commit_file_map = {}
 
-      current_filename = nil
-      # process the output
-      output.split("\n").each do |line|
-        if line[0, 1] == "\t"
-          lines << line[1, line.size]
-        elsif m = /^(\w{40}) (\d+) (\d+)/.match(line)
-          commit_id, old_lineno, lineno = m[1], m[2].to_i, m[3].to_i
-          commits[commit_id] = nil
-          info[lineno] = [commit_id, old_lineno, current_filename]
-        elsif line =~ /^filename (.*)/
-          current_filename = $1
-         end
+      split_output = output.split(/^(\w{40} \d+ \d+(?: \d+)?\n)/m)
+      split_output.shift if split_output.first.empty?
+
+      lines = split_output.each_slice(2).map do |sha_line, rest|
+        sha_split = sha_line.split(' ')
+
+        sha, old_lineno, lineno = sha_split[0], sha_split[1].to_i, sha_split[2].to_i
+
+        # indicate we need to fetch this sha in the bulk-fetch
+        commits[sha] = nil
+
+        if rest =~ /^filename (.*)$/
+          commit_file_map[sha] = $1
+        end
+
+        data = rest.split("\n").detect { |l| l[0] == "\t" }[1..-1]
+        { :data => data, :sha => sha, :filename => commit_file_map[sha], :old_line_number => old_lineno, :line_number => lineno }
       end
+
 
       # load all commits in single call
       @repo.batch(*commits.keys).each do |commit|
         commits[commit.id] = commit
       end
 
-      # get it together
-      info.sort.each do |lineno, (commit_id, old_lineno, filename)|
-        commit = commits[commit_id]
-        final << GitSpelunk::BlameLine.new(lineno, old_lineno, commit_id, commit, filename, lines[lineno - 1])
+      @lines = lines.map do |hash|
+        GitSpelunk::BlameLine.new(hash[:line_number], hash[:old_line_number], hash[:sha], commits[hash[:sha]], hash[:filename], hash[:data])
       end
-      @lines = final
     end
   end
 end

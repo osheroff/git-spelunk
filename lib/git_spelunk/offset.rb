@@ -113,9 +113,10 @@ module GitSpelunk
         last_old_block = blocks.last
 
         if last_old_block.type == " "
+          # if the previous context existed in both, just go to the end of that.
           last_old_block.offset + (last_old_block.size - 1)
         else
-          # offset N lines into last block, but don't go beyond the edge of it.
+          # offset N lines into the block that was removed to create the target block, but don't go beyond the edge of it.
           last_old_block.offset + [addition_block.size - 1, last_old_block.size].min
         end
       end
