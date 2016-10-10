@@ -37,13 +37,14 @@ def log(stuff)
   File.open('spelunk.log','ab'){|f| f.puts stuff }
 end
 
-file_context = GitSpelunk::FileContext.new(file, options)
+begin
+  file_context = GitSpelunk::FileContext.new(file, options)
 
-if file_context.get_blame.empty?
+  ui = GitSpelunk::UI.new(file_context)
+rescue GitSpelunk::EmptyBlame => e
   $stderr.puts("No git information found for '#{file}'")
   exit 1
 end
 
-ui = GitSpelunk::UI.new(file_context)
 
 #ui.run

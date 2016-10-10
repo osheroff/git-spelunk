@@ -1,10 +1,13 @@
 module GitSpelunk
   BlameLine = Struct.new(:line_number, :old_line_number, :sha, :commit, :filename, :content)
+  class EmptyBlame < StandardError ; end
   class Blame < Grit::Blame
     def process_raw_blame(output)
       lines = []
       commits = {}
       commit_file_map = {}
+
+      raise EmptyBlame.new if output.empty?
 
       split_output = output.split(/^(\w{40} \d+ \d+(?: \d+)?\n)/m)
       split_output.shift if split_output.first.empty?
