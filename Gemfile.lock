@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    git_spelunk (0.4.0)
+    git_spelunk (0.4.1)
       curses
       dispel
       grit
@@ -47,4 +47,4 @@ DEPENDENCIES
   rake
 
 BUNDLED WITH
-   1.10.6
+   1.11.2
