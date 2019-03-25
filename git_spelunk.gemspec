@@ -14,6 +14,8 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency("grit")
   s.add_runtime_dependency("dispel")
   s.add_runtime_dependency("curses")
+  s.add_runtime_dependency("rugged")
+  s.add_runtime_dependency('byebug')
 
   s.files = `git ls-files lib bin MIT-LICENSE.txt`.split("\n")
   s.license = "MIT"
