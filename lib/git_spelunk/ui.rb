@@ -165,7 +165,7 @@ Date: #{info[:date]}
           when 's'
             sha = @pager.blame_line.sha
             Curses.close_screen
-            system("git -p --git-dir='#{@file_context.repo.path}' show #{sha} | less")
+            system("git -p --git-dir='#{@file_context.repo.path}' show #{sha} | less -R")
           when '/', '?'
             @status.command_buffer = key
             @typing = :search
