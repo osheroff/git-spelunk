@@ -16,7 +16,6 @@ module GitSpelunk
       end
 
       @file = File.expand_path(file).sub(@repo.workdir, '')
-      @commit_cache = {}
     end
 
     def clone_for_blame_line(blame_line)
@@ -34,15 +33,10 @@ module GitSpelunk
     end
 
     def get_blame
-      @blame_data ||= begin
-        @new_to_old = {}
-        @line_to_sha = {}
-        GitSpelunk::Blame.new(@repo, @file, @sha).lines
-      end
+      @blame_data ||= GitSpelunk::Blame.new(@repo, @file, @sha).lines
     end
 
     def get_line_commit_info(blame_line)
-      get_blame
       commit = blame_line.commit
       return nil unless commit
       author = commit.author

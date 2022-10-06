@@ -19,7 +19,6 @@ module GitSpelunk
     end
 
     def process_raw_blame(output)
-      lines = []
       commits = {}
       commit_file_map = {}
 
