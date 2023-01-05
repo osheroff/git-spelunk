@@ -1,7 +1,7 @@
 module GitSpelunk
   class UI
     class RepoWindow
-      attr_accessor :content, :command_mode, :command_buffer
+      attr_accessor :content, :command_mode, :command_buffer, :height
 
       def initialize(height)
         @height = height
@@ -18,7 +18,6 @@ module GitSpelunk
 
       private
 
-      #with_highlighting do
       def status_line
         [
           "navigation: j k CTRL-D CTRL-U",

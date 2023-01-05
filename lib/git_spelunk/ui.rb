@@ -6,22 +6,23 @@ module GitSpelunk
   class UI
     def initialize(file_context)
       Dispel::Screen.open(:colors => true) do |screen|
-        calculate_heights!
         @file_context = file_context
         @history = [file_context]
 
-        @pager = PagerWindow.new(@pager_height)
+        @pager = PagerWindow.new(0)
         @pager.data = @file_context.get_blame
 
-        @repo = RepoWindow.new(@repo_height)
+        @repo = RepoWindow.new(0)
         set_repo_content
 
         @status = StatusWindow.new
         set_status_message
 
+        calculate_heights!(screen)
         screen.draw *draw
-        Dispel::Keyboard.output :timeout => 0.30 do |key|
+        Dispel::Keyboard.output(timeout: 0.5) do |key|
           handle_key(key)
+          calculate_heights!(screen)
           screen.draw *draw
         end
       end
@@ -45,10 +46,10 @@ module GitSpelunk
       ]
     end
 
-    def calculate_heights!
-      @status_height = 1
-      @repo_height = [(Curses.lines.to_f * 0.20).to_i, 6].max
-      @pager_height = Curses.lines  - @repo_height - @status_height
+    def calculate_heights!(screen)
+      status_height = 1
+      @repo.height = [(screen.lines.to_f * 0.20).to_i, 6].max
+      @pager.height = screen.lines  - @repo.height - status_height
     end
 
     def set_status_message

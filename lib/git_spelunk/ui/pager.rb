@@ -13,7 +13,7 @@ module GitSpelunk
         @highlight_sha = true
       end
 
-      attr_accessor :data, :highlight_sha, :search_term
+      attr_accessor :data, :highlight_sha, :search_term, :height
       attr_reader :cursor, :top, :data
 
       def blame_line
