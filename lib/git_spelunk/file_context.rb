@@ -50,11 +50,12 @@ module GitSpelunk
       author_info = "%s %s" % [author[:name], author[:email]]
       short_message = commit.message.split("\n").find { |x| !x.strip.empty? } || ''
       utc = author[:time]
-      [
-        "commit " + commit.oid,
-        "Author: " + author_info,
-        "Date: " + utc.to_s
-      ].join("\n") + "\n\n" + "     " + short_message
+      {
+        commit: commit.oid,
+        author: author_info,
+        date: author[:time].to_s,
+        message: commit.message
+      }
     end
   end
 end

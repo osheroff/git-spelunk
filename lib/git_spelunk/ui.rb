@@ -57,7 +57,16 @@ module GitSpelunk
     end
 
     def set_repo_content
-      @repo.content = @file_context.get_line_commit_info(@pager.blame_line)
+      info = @file_context.get_line_commit_info(@pager.blame_line)
+      content = <<-EOL
+commit: #{info[:commit]}
+Author: #{info[:author]}
+Date: #{info[:date]}
+
+      EOL
+      message_lines = info[:message].split(/\r?\n/)
+      content += message_lines[0..(@repo.height - 6)].join("\n")
+      @repo.content = content
       @repo.draw
     end
 
