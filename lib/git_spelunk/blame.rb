@@ -1,7 +1,23 @@
+require 'open3'
+
 module GitSpelunk
   BlameLine = Struct.new(:line_number, :old_line_number, :sha, :commit, :filename, :content)
   class EmptyBlame < StandardError ; end
-  class Blame < Grit::Blame
+  class Blame
+    def initialize(repo, file, sha)
+      @lines = nil
+      @repo = repo
+      @file = file
+      @sha = sha
+    end
+    
+    def lines
+      return @lines if @lines
+      cmd = ["git", "--git-dir", @repo.path, "blame", "--porcelain", @sha, "--", @file]
+      output, err, status = Open3.capture3(*cmd)
+      @lines ||= process_raw_blame(output)
+    end
+
     def process_raw_blame(output)
       lines = []
       commits = {}
@@ -17,8 +33,7 @@ module GitSpelunk
 
         sha, old_lineno, lineno = sha_split[0], sha_split[1].to_i, sha_split[2].to_i
 
-        # indicate we need to fetch this sha in the bulk-fetch
-        commits[sha] = nil
+        commits[sha] ||= @repo.lookup(sha)
 
         if rest =~ /^filename (.*)$/
           commit_file_map[sha] = $1
@@ -28,16 +43,9 @@ module GitSpelunk
         { :data => data, :sha => sha, :filename => commit_file_map[sha], :old_line_number => old_lineno, :line_number => lineno }
       end
 
-
-      # load all commits in single call
-      @repo.batch(*commits.keys).each do |commit|
-        commits[commit.id] = commit
-      end
-
-      @lines = lines.map do |hash|
+      lines.map do |hash|
         GitSpelunk::BlameLine.new(hash[:line_number], hash[:old_line_number], hash[:sha], commits[hash[:sha]], hash[:filename], hash[:data])
       end
     end
   end
 end
-

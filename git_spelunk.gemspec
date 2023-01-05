@@ -11,7 +11,7 @@ Gem::Specification.new do |s|
   s.summary     = "A git tool for exploring history and blame"
   s.description = "git-spelunk is a terminal based exploration tool for git blame and history, based on the notion of moving in history based on file context"
 
-  s.add_runtime_dependency("grit")
+  s.add_runtime_dependency("rugged")
   s.add_runtime_dependency("dispel")
   s.add_runtime_dependency("curses")
 

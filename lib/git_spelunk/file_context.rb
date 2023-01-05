@@ -1,4 +1,4 @@
-require 'grit'
+require 'rugged'
 require 'fileutils'
 require 'git_spelunk/blame'
 
@@ -12,12 +12,10 @@ module GitSpelunk
       @line_number = options[:line_number] || 1
 
       @repo = options.fetch(:repo) do
-        repo_directory = find_repo_from_file(file)
-        @file = File.expand_path(file).sub(%r{^#{repo_directory}/}, '')
-        Grit::Repo.new(repo_directory)
+        find_repo_from_file(file)
       end
 
-      @file ||= options.fetch(:file)
+      @file = File.expand_path(file).sub(@repo.workdir, '')
       @commit_cache = {}
     end
 
@@ -32,18 +30,7 @@ module GitSpelunk
     end
 
     def find_repo_from_file(file)
-      file = './' + file unless file.start_with?('/')
-      targets = File.expand_path(file).split('/')
-      targets.pop
-      while !File.directory?(targets.join("/") + "/.git")
-        targets.pop
-      end
-
-      if targets.empty?
-        nil
-      else
-        targets.join("/")
-      end
+      Rugged::Repository.discover(file)
     end
 
     def get_blame
@@ -58,15 +45,16 @@ module GitSpelunk
       get_blame
       commit = blame_line.commit
       return nil unless commit
+      author = commit.author
 
-      author_info = commit.author_string.split(" ")
-      tz = author_info.pop
-      utc = Time.at(author_info.pop.to_i)
+      author_info = "%s %s" % [author[:name], author[:email]]
+      short_message = commit.message.split("\n").find { |x| !x.strip.empty? } || ''
+      utc = author[:time]
       [
-        "commit " + commit.id,
-        "Author: " + author_info.join(" "),
+        "commit " + commit.oid,
+        "Author: " + author_info,
         "Date: " + utc.to_s
-      ].join("\n") + "\n\n" + "     " + commit.short_message
+      ].join("\n") + "\n\n" + "     " + short_message
     end
   end
 end

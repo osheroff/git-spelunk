@@ -25,8 +25,8 @@ end
 
 options = parse_options(ARGV)
 
-raise "No filename specified. You must provide a file to blame-on." if ARGV.size == 0
-raise "Too many arguments" if ARGV.size > 1
+abort "No filename specified. You must provide a file to blame-on." if ARGV.size == 0
+abort "Too many arguments" if ARGV.size > 1
 
 file = ARGV[0]
 

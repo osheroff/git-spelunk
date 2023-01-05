@@ -33,17 +33,16 @@
 
 
 module GitSpelunk
-  require 'grit'
-
   class Offset
-    attr_reader :repo, :file_name, :sha, :chunks
+    attr_reader :repo, :file_name, :sha, :hunks
 
     def initialize(repo, file_name, sha, line_number)
       @repo = repo
       @file_name = file_name
       @sha = sha
       @line_number = line_number
-      @parent = @repo.commits(@sha)[0].parents[0]
+      @commit = @repo.lookup(@sha)
+      @parent = @commit.parents[0]
       true
     end
 
@@ -51,9 +50,13 @@ module GitSpelunk
     class Chunk
       attr_reader :minus_offset, :minus_length, :plus_offset, :plus_length, :lines
 
-      def initialize(data)
-        @minus_offset, @minus_length, @plus_offset, @plus_length = *extract_stats(data[0])
-        @lines = data[1..-1]
+      def initialize(hunk)
+        @minus_offset = hunk.old_start
+        @minus_length = hunk.old_lines
+        @plus_offset = hunk.new_start
+        @plus_length = hunk.new_lines
+
+        @lines = hunk.lines
       end
 
       def has_line?(line_number)
@@ -66,7 +69,7 @@ module GitSpelunk
         end
 
         def type
-          data.first[0]
+          data.first.line_origin
         end
 
         def size
@@ -79,6 +82,7 @@ module GitSpelunk
       end
 
       def find_parent_line_number(target)
+        return 1 if target == 1 
         # separate in blocks of lines with the same prefix
 
         old_line_number = minus_offset
@@ -86,16 +90,15 @@ module GitSpelunk
 
         blocks = []
         lines.each do |l|
-          next if l =~ /\\ No newline at end of file/
           last_block = blocks.last
 
-          if last_block.nil? || last_block.type != l[0]
+          if last_block.nil? || last_block.type != l.line_origin
             blocks << LineBlock.new(old_line_number, l)
           else
             last_block << l
           end
 
-          if l[0] == "+" || l[0] == " "
+          if l.line_origin == :context || l.line_origin == :addition
             if new_line_number == target
               # important: we don't finish building the structure.
               break
@@ -104,7 +107,7 @@ module GitSpelunk
             new_line_number += 1
           end
 
-          if l[0] == "-" || l[0] == " "
+          if l.line_origin == :deletion || l.line_origin == :context
             old_line_number += 1
           end
         end
@@ -112,7 +115,7 @@ module GitSpelunk
         addition_block = blocks.pop
         last_old_block = blocks.last
 
-        if last_old_block.type == " "
+        if last_old_block.type == :context
           # if the previous context existed in both, just go to the end of that.
           last_old_block.offset + (last_old_block.size - 1)
         else
@@ -120,37 +123,14 @@ module GitSpelunk
           last_old_block.offset + [addition_block.size - 1, last_old_block.size].min
         end
       end
-
-      private
-
-      def extract_stats(l)
-        #@@ -1,355 +1,355 @@
-        l.scan(STATS_PATTERN).first.map(&:to_i)
-      end
-
-      def old_has?(line)
-        # Src line will either have a "+" or will be an unchanged line
-        line[0] == '-' || line[0] == " "
-      end
-
-      def new_has?(line)
-        # Src line will either have a "-" or will be an unchanged line
-        line[0] == '+' || line[0] == " "
-      end
     end
 
-    def chunks
-      @chunks ||= begin
-        diffs = @repo.diff(@parent.id, @sha, @file_name)
-        return nil if diffs.empty?
+    def hunks
+      @hunks ||= begin
+        diff = @parent.diff(@commit, paths: [@file_name])
+        return nil unless diff
 
-        chunks = diffs[0].diff.split(/\n/).inject([[]]) do |arr, line|
-          arr.push([]) if line =~ STATS_PATTERN
-          arr.last << line
-          arr
-        end
-
-        chunks[1..-1].map { |c| Chunk.new(c) } # slice off first chunk -- it's just the filename
+        diff.patches[0].hunks.map { |h| Chunk.new(h) } 
       end
     end
 
@@ -159,11 +139,11 @@ module GitSpelunk
     end
 
     def unable_to_trace_lineage?
-      @parent && (@chunks.nil? || target_chunk.nil?)
+      @parent && (@hunks.nil? || target_chunk.nil?)
     end
 
     def line_number_to_parent
-      return :at_beginning_of_time unless @parent && chunks
+      return :at_beginning_of_time unless @parent && hunks
       chunk = target_chunk(@line_number)
       return :unable_to_trace unless chunk
 
@@ -175,7 +155,7 @@ module GitSpelunk
     private
 
     def target_chunk(line_number)
-      chunks.find { |c| c.has_line?(line_number) }
+      hunks.find { |c| c.has_line?(line_number) }
     end
   end
 end
