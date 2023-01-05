@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    git_spelunk (0.5.0)
+    git_spelunk (0.5.1)
       curses
       dispel
       rugged
