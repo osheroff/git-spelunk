@@ -34,7 +34,7 @@ module GitSpelunk
       view3, style3 = @status.draw
 
       cursor = if typing?
-        [@pager_height + @repo_height, @status.command_buffer.size + 1]
+        [@pager.height + @repo.height, @status.command_buffer.size + 1]
       else
         [Curses.lines-1, Curses.cols]
       end
