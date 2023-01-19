@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    git_spelunk (0.5.1)
+    git_spelunk (0.5.2)
       curses
       dispel
       rugged
@@ -30,4 +30,4 @@ DEPENDENCIES
   rake
 
 BUNDLED WITH
-   2.2.22
+   2.4.2
