@@ -30,7 +30,7 @@ module GitSpelunk
     end
 
     def find_repo_from_file(file)
-      Rugged::Repository.discover(file)
+      Rugged::Repository.discover(File.dirname(file))
     end
 
     def get_blame
