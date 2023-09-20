@@ -80,7 +80,7 @@ Date: #{info[:date]}
     def history_back
       @status.set_onetime_message("Rewinding...")
       goto = @file_context.get_line_for_sha_parent(@pager.blame_line)
-      if goto.is_a?(Fixnum)
+      if goto.is_a?(Integer)
         @file_context.line_number = @pager.cursor
         @history.push(@file_context)
 
@@ -165,7 +165,7 @@ Date: #{info[:date]}
           when 's'
             sha = @pager.blame_line.sha
             Curses.close_screen
-            system("git -p --git-dir='#{@file_context.repo.path}' show #{sha} | less")
+            system("git -p --git-dir='#{@file_context.repo.path}' show #{sha} | less -R")
           when '/', '?'
             @status.command_buffer = key
             @typing = :search
