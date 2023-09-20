@@ -43,7 +43,6 @@ module GitSpelunk
       @line_number = line_number
       @commit = @repo.lookup(@sha)
       @parent = @commit.parents[0]
-      true
     end
 
     STATS_PATTERN=/@@ \-(\d+),(\d+) \+(\d+),(\d+) @@/
@@ -132,14 +131,6 @@ module GitSpelunk
 
         diff.patches[0].hunks.map { |h| Chunk.new(h) } 
       end
-    end
-
-    def at_beginning_of_time?
-      @parent.nil?
-    end
-
-    def unable_to_trace_lineage?
-      @parent && (@hunks.nil? || target_chunk.nil?)
     end
 
     def line_number_to_parent
